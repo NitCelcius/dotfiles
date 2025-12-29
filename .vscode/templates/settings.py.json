@@ -1,0 +1,18 @@
+{
+  "python.analysis.typeCheckingMode": "strict",
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    ".ruff_cache": true,
+    "**/__pycache__": true,
+    ".venv": true
+  },
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "always"
+    }
+  }
+}
