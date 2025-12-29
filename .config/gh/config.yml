@@ -1,0 +1,13 @@
+# The current version of the config schema
+version: 1
+# When to interactively prompt. This is a global config that cannot be overridden by hostname. Supported values: enabled, disabled
+prompt: enabled
+# Preference for editor-based interactive prompting. This is a global config that cannot be overridden by hostname. Supported values: enabled, disabled
+prefer_editor_prompt: disabled
+# Aliases allow you to create nicknames for gh commands
+aliases:
+    pc: pr checkout
+# Whether to display labels using their RGB hex color codes in terminals that support truecolor. Supported values: enabled, disabled
+color_labels: enabled
+# Whether to use a animated spinner as a progress indicator. If disabled, a textual progress indicator is used instead. Supported values: enabled, disabled
+spinner: enabled

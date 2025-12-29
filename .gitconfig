@@ -1,0 +1,15 @@
+[commit]
+	gpgsign = true
+[rerere]
+	enabled = true
+[push]
+	autoSetupRemote = true
+[alias]
+	co = checkout
+	cob = 
+	unstage = reset HEAD --
+	con = checkout -b
+	last = log -1 HEAD
+	i = status
+	pushf = push --force-with-lease
+	sl = stash list
