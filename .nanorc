@@ -1,0 +1,12 @@
+set linenumbers
+set tabsize 4
+set tabstospaces
+
+set mouse
+set nonewlines
+
+set positionlog
+set showcursor
+
+set numbercolor cyan
+
