@@ -1,0 +1,78 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "languages": {
+    "Python": {
+      "tab_size": 2,
+      "language_servers": ["ruff"],
+    },
+  },
+  "agent": {
+    "use_modifier_to_send": true,
+    "default_model": {
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "enable_thinking": true,
+    },
+    "favorite_models": [],
+    "model_parameters": [],
+  },
+  "agent_servers": {
+    "github-copilot-cli": {
+      "type": "registry",
+    },
+    "gemini": {
+      "type": "registry",
+    },
+    "codex-acp": {
+      "type": "registry",
+    },
+  },
+  "terminal": {
+    "env": {},
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+  },
+  "git": {
+    "inline_blame": {
+      "enabled": true,
+    },
+  },
+  "base_keymap": "VSCode",
+  "preview_tabs": {
+    "enabled": false,
+  },
+  "multi_cursor_modifier": "alt",
+  "minimap": {
+    "max_width_columns": 60,
+  },
+  "autosave": {
+    "after_delay": {
+      "milliseconds": 60000,
+    },
+  },
+  "buffer_font_fallbacks": ["Menlo", "Monaco", "monospace"],
+  "buffer_font_family": "Ricty Diminished",
+  "file_types": {
+    "jsonc": ["*.config"],
+  },
+  "auto_indent_on_paste": true,
+  "linked_edits": true,
+  "soft_wrap": "editor_width",
+  "tab_size": 2,
+  "ui_font_size": 16,
+  "buffer_font_size": 14.0,
+  "theme": {
+    "mode": "system",
+    "light": "Catppuccin Latte - No Italics",
+    "dark": "Ayu Dark",
+  },
+}
