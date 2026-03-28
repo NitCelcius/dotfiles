@@ -1,0 +1,35 @@
+name: chezmoi apply
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache chezmoi
+        id: cache-chezmoi
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/chezmoi
+          key: chezmoi-${{ runner.os }}-v2.70.0
+
+      - name: Install chezmoi
+        if: steps.cache-chezmoi.outputs.cache-hit != 'true'
+        run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin -t v2.70.0
+
+      - name: Make fake bw executable
+        run: chmod +x ci/bw
+
+      - name: Run chezmoi apply (dry-run)
+        run: |
+          export PATH="$GITHUB_WORKSPACE/ci:$PATH"
+          ~/.local/bin/chezmoi apply \
+            --source "$GITHUB_WORKSPACE" \
+            --destination /tmp/home \
+            --dry-run \
+            --no-pager \
+            --verbose
