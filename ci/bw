@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Mock bw cli
+
+case "$1 $2" in
+  "get item")
+    echo '{
+      "id": "'"$3"'",
+      "name": "CI Dummy",
+      "type": 5,
+      "sshKey": {
+        "publicKey": "ssh-ed25519 AAAAAAAAAAAAAAAAAAAAAAAAAAA_DUMMY_CI_KEY_FOR_TEMPLATE_TESTING_ONLY",
+        "fingerprint": "SHA256:dummyfingerprint",
+        "privateKey": ""
+      },
+      "fields": [
+        { "name": "ssh_public_key", "value": "ssh-ed25519 AAAAAAAAAAAAAAAAAAAAAAAAAAA_DUMMY_CI_KEY_FOR_TEMPLATE_TESTING_ONLY" }
+      ]
+    }'
+    ;;
+  "get status")
+    echo '{"status":"unlocked"}'
+    ;;
+  *)
+    echo "ci/bw: unhandled command: $*" >&2
+    exit 1
+    ;;
+esac
