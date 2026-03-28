@@ -1,0 +1,51 @@
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[user]
+	name = NitCelcius
+	email = nitcelcius@nitcelcius.me
+	signingkey = {{ (bitwarden "item" "b70567a7-5d86-4db3-8741-b34200f283b4").sshKey.publicKey }}
+[core]
+{{ if eq .chezmoi.os "windows" }}	editor = "C:\\Users\\nitcelcius\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code" --wait
+	sshCommand = C:/Windows/System32/OpenSSH/ssh.exe
+{{ else }}	editor = code --wait
+{{ end -}}
+[commit]
+	gpgsign = true
+[rerere]
+	enabled = true
+[gpg "ssh"]
+{{ if eq .chezmoi.os "windows" }}	program = C:/Windows/System32/OpenSSH/ssh-keygen.exe
+{{ else }}	program = ssh-keygen
+{{ end -}}
+[gpg]
+{{ if eq .chezmoi.os "windows" }}	program = C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe
+{{ else }}	program = gpg
+{{ end }}	format = ssh
+[push]
+	autoSetupRemote = true
+[alias]
+	s = status
+	d = diff
+	a = add
+	cm = commit -m
+	ca = commit --amend
+	co = checkout
+	cb = checkout -b
+	sw = switch
+	swc = switch -c
+	br = branch
+	l = log --oneline --graph --decorate -20
+	la = log --oneline --graph --decorate --all
+	rc = rebase --continue
+	ri = rebase -i
+	p = push
+	pushf = push --force-with-lease
+	pullr = pull --rebase
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	sl = stash list
+[include]
+	path = ~/.gitconfig.local
