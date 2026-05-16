@@ -7,13 +7,27 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "git_panel": {
+    "dock": "left"
+  },
+  "project_panel": {
+    "dock": "left"
+  },
   "languages": {
     "Python": {
       "tab_size": 2,
-      "language_servers": ["ruff"],
+      "language_servers": ["ruff", "basedpyright"],
     },
   },
   "agent": {
+    "sidebar_side": "right",
+    "dock": "right",
     "use_modifier_to_send": true,
     "default_model": {
       "provider": "google",
@@ -24,6 +38,9 @@
     "model_parameters": [],
   },
   "agent_servers": {
+    "claude-acp": {
+      "type": "registry"
+    },
     "github-copilot-cli": {
       "type": "registry",
     },
