@@ -28,3 +28,9 @@ Do not add personal/local entries to `.gitignore`.
 - Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`
 - WIP commits: use `WIP: <plain description>`, e.g. `WIP: fix auth token expiry`
   - No conventional prefix needed — WIP commits are rebased and reworded before merging
+
+## Subagents
+
+Parallel agents do not inherit tool permissions from the main session.
+Prefer handling file edits and git operations directly rather than dispatching agents for them.
+Agents are better suited for read-only research tasks.
