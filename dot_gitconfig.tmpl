@@ -8,20 +8,13 @@
 	email = nitcelcius@nitcelcius.me
 	signingkey = {{ (bitwarden "item" "b70567a7-5d86-4db3-8741-b34200f283b4").sshKey.publicKey }}
 [core]
-	sshCommand = C:/Windows/System32/OpenSSH/ssh.exe
 	editor = code --wait
 [commit]
 	gpgsign = true
 [rerere]
 	enabled = true
-[gpg "ssh"]
-{{ if eq .chezmoi.os "windows" }}	program = C:/Windows/System32/OpenSSH/ssh-keygen.exe
-{{ else }}	program = ssh-keygen
-{{ end -}}
 [gpg]
-{{ if eq .chezmoi.os "windows" }}	program = C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe
-{{ else }}	program = gpg
-{{ end }}	format = ssh
+	format = ssh
 [push]
 	autoSetupRemote = true
 [alias]
