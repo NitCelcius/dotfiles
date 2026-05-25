@@ -7,28 +7,31 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "edit_predictions": {
+    "provider": "zed",
+  },
   "mouse_wheel_zoom": true,
   "ui_font_family": ".ZedSans",
   "active_pane_modifiers": {
-    "inactive_opacity": 0.9
+    "inactive_opacity": 0.9,
   },
   "tab_bar": {
-    "show_pinned_tabs_in_separate_row": false
+    "show_pinned_tabs_in_separate_row": false,
   },
   "tabs": {
     "file_icons": true,
-    "git_status": false
+    "git_status": false,
   },
   "title_bar": {
     "show_sign_in": true,
     "show_user_menu": true,
     "show_user_picture": true,
     "show_menus": false,
-    "show_branch_status_icon": true
+    "show_branch_status_icon": true,
   },
   "status_bar": {
     "show_active_file": false,
-    "active_encoding_button": "enabled"
+    "active_encoding_button": "enabled",
   },
   "text_rendering_mode": "platform_default",
   "agent_ui_font_size": 15.0,
@@ -38,12 +41,12 @@
   "cli_default_open_behavior": "new_window",
   "project_panel": {
     "bold_folder_labels": true,
-    "dock": "left"
+    "dock": "left",
   },
   "icon_theme": {
     "mode": "dark",
     "light": "Zed (Default)",
-    "dark": "Zed (Default)"
+    "dark": "Zed (Default)",
   },
   "languages": {
     "Python": {
@@ -51,7 +54,7 @@
       "linked_edits": true,
       "soft_wrap": "editor_width",
       "tab_size": 2,
-      "language_servers": ["ruff"],
+      "language_servers": ["ruff", "basedpyright"],
     },
   },
   "agent": {
@@ -67,7 +70,7 @@
   },
   "agent_servers": {
     "claude-acp": {
-      "type": "registry"
+      "type": "registry",
     },
     "github-copilot-cli": {
       "type": "registry",
@@ -109,10 +112,7 @@
   "buffer_font_fallbacks": ["Menlo", "Monaco", "monospace"],
   "buffer_font_family": "HackGen35",
   "file_types": {
-    "jsonc": [
-      "*.config",
-      "*.config"
-    ],
+    "jsonc": ["*.config", "*.config"],
   },
   "auto_indent_on_paste": true,
   "linked_edits": true,
