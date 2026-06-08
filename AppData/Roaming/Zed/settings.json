@@ -7,19 +7,6 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "wsl_connections": [
-    {
-      "distro_name": "Ubuntu",
-      "user": null,
-      "projects": [
-        {
-          "paths": [
-            "/home/nitcelcius/source/alpacahack/260607/./"
-          ]
-        }
-      ]
-    }
-  ],
   "diff_view_style": "split",
   "edit_predictions": {
     "provider": "zed",
