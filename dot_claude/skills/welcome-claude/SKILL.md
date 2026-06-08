@@ -46,7 +46,38 @@ Also check `pyproject.toml` or `requirements.txt` for framework dependencies:
 - `torch` / `tensorflow` / `keras` → apply ML training block
 - `git lfs` entries in `.gitattributes` → apply LFS block
 
-## Step 4 — Append convention blocks
+## Step 4 — Python tooling: syntax-check hook and formatter gate (only if Python detected)
+
+### A. py_compile syntax-check hook
+
+Invoke the `update-config` skill to add a `PostToolUse` hook to this project's `.claude/settings.json`:
+- Matcher: `Edit|Write` on files matching `*.py`
+- Command: `uv run python -m py_compile <file>`
+- Behavior: **non-blocking** — surface failures as feedback to Claude so it can self-correct on the next turn; do not reject the edit. (`py_compile` is read-only, so automating it carries no risk of file drift.)
+
+Record whether this hook was successfully added — it determines which version of the Python conventions block Step 5 writes.
+
+### B. Formatter detection and pre-commit gate check
+
+Detect which formatter the project uses (check in order, stop at first match):
+- `[tool.ruff]` in `pyproject.toml`, or `ruff.toml` / `.ruff.toml` present → ruff
+- `[tool.black]` in `pyproject.toml` → black
+- `[yapf]` in `setup.cfg` → yapf
+- none found → skip the rest of this section
+
+Formatters mutate files, so do **not** wire one into a Claude Code hook — a PostToolUse rewrite would leave Claude holding a stale view of content it just wrote, risking failed or duplicated edits on its next turn.
+
+Instead, check whether a git-level pre-commit gate already enforces formatting:
+- `.pre-commit-config.yaml` containing a ruff-format / black hook entry
+- `.husky/pre-commit` combined with a `lint-staged` config that runs the formatter
+- `lefthook.yml` with a formatter command
+
+- **Gate exists:** do nothing further — it already covers every path to a commit (yours, Claude's, `/draft-pr`'s). Do not add a formatting instruction to CLAUDE.md; it would be redundant.
+- **No gate exists:** do not write a soft "run the formatter before committing" instruction into CLAUDE.md either — Claude can't enforce that on commits it didn't make. Instead, surface a one-time suggestion to the user, e.g. "This repo uses `<formatter>` but has no pre-commit gate running it — want one set up?", and leave the decision to them.
+
+---
+
+## Step 5 — Append convention blocks
 
 Add only the blocks that match the detected stack. Do not add blocks for absent languages or frameworks.
 
@@ -57,8 +88,13 @@ Add only the blocks that match the detected stack. Do not add blocks for absent 
 ```markdown
 ## Python Conventions
 
-- After every Python edit: `uv run python -m py_compile <file>` — catches syntax errors before they compound
 - After logic changes: `uv run pytest` before committing
+```
+
+If the `py_compile` hook from Step 4A was **not** successfully added (e.g. user declined, or `update-config` unavailable), also add this line to the block above:
+
+```
+- After every Python edit: `uv run python -m py_compile <file>` — catches syntax errors before they compound
 ```
 
 ---
@@ -108,7 +144,7 @@ Add only the blocks that match the detected stack. Do not add blocks for absent 
 
 ---
 
-## Step 5 — Write and confirm
+## Step 6 — Write and confirm
 
 Write the completed CLAUDE.md to the repository root. Then output a one-line summary:
 
