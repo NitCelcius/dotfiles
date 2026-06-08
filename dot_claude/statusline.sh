@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code statusline (p10k / powerline, 2行)
-#   L1: 📁folder ▸ branch ▸ 📝+add -del ▸ 🪟ctx(k %)      … この会話/repo
-#   L2: ⏰5h(残時間 %) ▸ 🔥k/min $sess ▸ 🧠cache ▸ 🤖model  … 使用量
+#   L1: 📁folder > branch > 📝+add -del        … この会話/repo
+#   L2: 🪟ctx(k %) ⏰5h(残時間 %) > 🔥k/min $sess > 🧠cache > 🤖model  … 使用量
 #
 # めちゃくちゃ vibe に作ったので品質はあまり保証できない
 # 構成: PREPARE で表示値・色をすべて算出 → RENDER で emit を一括。
@@ -27,10 +27,10 @@ format_branch() {  # A/B → A(3字)/B(15字…) ／ スラッシュ無しは 20
   local name="$1"
   if [[ "$name" == */* ]]; then
     local head="${name%%/*}" tail="${name#*/}"
-    [ "${#tail}" -gt 15 ] && tail="${tail:0:15}…"
+    [ "${#tail}" -gt 20 ] && tail="${tail:0:20}…"
     printf '%s/%s' "${head:0:3}" "$tail"
   else
-    [ "${#name}" -gt 20 ] && name="${name:0:20}…"
+    [ "${#name}" -gt 25 ] && name="${name:0:25}…"
     printf '%s' "$name"
   fi
 }
@@ -199,10 +199,10 @@ line1=""; line1_bg=""
 emit line1 line1_bg "$folder_text" "$FG_TEXT" "$folder_bg"
 [ -n "$branch_name" ]               && emit line1 line1_bg "$branch_text"  "$FG_TEXT" "$branch_bg"
 [ -n "$diff_text" ]                 && emit line1 line1_bg "$diff_text"    "$FG_TEXT" "$diff_bg"
-[ -n "$context_text" ]              && emit line1 line1_bg "$context_text" "$FG_TEXT" "$context_bg"
 close_line line1 line1_bg
 
 line2=""; line2_bg=""
+[ -n "$context_text" ]              && emit line2 line1_bg "$context_text" "$FG_TEXT" "$context_bg"
 [ -n "$session_text" ]              && emit line2 line2_bg "$session_text" "$FG_TEXT" "$session_bg"
 [ -n "$burn_text" ]                 && emit line2 line2_bg "$burn_text"    "$FG_TEXT" "$burn_bg"
 [ -n "$cache_read_share_percent" ]  && emit line2 line2_bg "$cache_text"   "$FG_TEXT" "$cache_bg"
