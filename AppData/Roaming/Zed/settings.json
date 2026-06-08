@@ -7,6 +7,20 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "wsl_connections": [
+    {
+      "distro_name": "Ubuntu",
+      "user": null,
+      "projects": [
+        {
+          "paths": [
+            "/home/nitcelcius/source/alpacahack/260607/./"
+          ]
+        }
+      ]
+    }
+  ],
+  "diff_view_style": "split",
   "edit_predictions": {
     "provider": "zed",
   },
@@ -55,6 +69,15 @@
       "soft_wrap": "editor_width",
       "tab_size": 2,
       "language_servers": ["ruff", "basedpyright"],
+    },
+    "TypeScript": {
+      "language_servers": ["tsgo", "!vtsls"],
+    },
+    "TSX": {
+      "language_servers": ["tsgo", "!vtsls"],
+    },
+    "JavaScript": {
+      "language_servers": ["tsgo", "!vtsls"],
     },
   },
   "agent": {
@@ -114,6 +137,20 @@
   "file_types": {
     "jsonc": ["*.config", "*.config"],
   },
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings",
+    "**/.git",
+    "**/node_modules",
+    "**/.next",
+  ],
   "auto_indent_on_paste": true,
   "linked_edits": true,
   "soft_wrap": "editor_width",
