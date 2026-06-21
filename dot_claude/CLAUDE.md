@@ -42,6 +42,18 @@ If the total insertions + deletions is roughly 300 or more, ask the user whether
 If the signing agent socket is unavailable mid-commit, ask the user for confirmation, then retry with `--no-gpg-sign`.
 The user will redo signing before merging.
 
+## Communication & Clarifying Intent
+
+  If the subject of my request is vague — the *what* (which component, file,
+  repo, page, element) isn't explicitly named — stop and ask before acting.
+  Don't guess the noun and run with it; a vague subject is the most common;
+  cause of wrong-approach rework.
+  When I describe a change, expect me to name the exact subject first. If I
+  don't, prompt me for it rather than inferring.
+  Surface ambiguity early and cheaply: one clarifying question up front beats
+  a discarded attempt.
+
+
 ## Before Editing
 
 - Before changing logic that depends on data shapes, expected values, or canonical sources: read the actual source first, state the assumption explicitly, and wait for confirmation before editing.
