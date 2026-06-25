@@ -3,6 +3,7 @@
     "allow": [],
     "defaultMode": "default"
   },
+  "model": "sonnet",
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
@@ -22,6 +23,8 @@
   "awaySummaryEnabled": false,
   "promptSuggestionEnabled": false,
   "autoUpdatesChannel": "latest",
+  "tui": "fullscreen",
+  "theme": "light",
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
