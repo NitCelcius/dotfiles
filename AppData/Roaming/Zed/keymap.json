@@ -1,0 +1,124 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      // "shift shift": "file_finder::Toggle"
+    },
+  },
+  {
+    "context": "Editor && vim_mode == insert",
+    "bindings": {
+      // "j k": "vim::NormalBefore"
+    },
+  },
+  {
+    "context": "Editor",
+    "bindings": {
+      "alt-h": "editor::Hover",
+      "alt-backspace": "editor::DeleteToBeginningOfLine",
+      "ctrl-backspace": "editor::DeleteToPreviousWordStart",
+    },
+  },
+  {
+    "context": "Editor",
+    "unbind": {
+      "ctrl-k ctrl-i": "editor::Hover",
+    },
+  },
+  {
+    "context": "Editor",
+    "unbind": {
+      "ctrl-k ctrl-l": "editor::ToggleFold",
+    },
+  },
+  {
+    "context": "Editor",
+    "unbind": {
+      "ctrl-k ctrl-j": "editor::UnfoldAll",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-k ctrl-,": "workspace::ActivatePaneDown",
+    },
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-k ctrl-down": "workspace::ActivatePaneDown",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-k ctrl-j": "workspace::ActivatePaneLeft",
+    },
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-k ctrl-left": "workspace::ActivatePaneLeft",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-k ctrl-l": "workspace::ActivatePaneRight",
+    },
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-k ctrl-right": "workspace::ActivatePaneRight",
+    },
+  },
+  {
+    "context": "Editor",
+    "bindings": {
+      "ctrl-k ctrl-shift-f": "editor::FormatSelections",
+    },
+  },
+  {
+    "context": "Editor",
+    "unbind": {
+      "ctrl-k ctrl-f": "editor::FormatSelections",
+    },
+  },
+  {
+    "bindings": {
+      "ctrl-k ctrl-f": "workspace::NewSearch",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-alt-b": "outline_panel::ToggleFocus"
+    }
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-shift-b": "outline_panel::ToggleFocus"
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-shift-b": "workspace::ToggleRightDock"
+    }
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-alt-b": "workspace::ToggleRightDock"
+    }
+  }
+]
