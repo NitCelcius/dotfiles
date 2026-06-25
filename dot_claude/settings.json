@@ -24,7 +24,7 @@
   "promptSuggestionEnabled": false,
   "autoUpdatesChannel": "latest",
   "tui": "fullscreen",
-  "theme": "light",
+  "theme": "auto",
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
