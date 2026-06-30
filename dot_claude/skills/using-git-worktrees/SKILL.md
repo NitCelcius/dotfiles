@@ -54,19 +54,25 @@ Based on work description + detected convention, suggest a branch name.
 - Work: "fix auth token expiry" + convention `bugfix/` → Suggest: `bugfix/auth-token-expiry`
 - Work: "stage-2-1" + convention with date suffix → Suggest: `feat/stage-2-1/260607`
 
-**Confirm with user:**
+**Use `AskUserQuestion` to confirm.** Always include the suggested name as the first option and "Other" will be provided automatically for a custom name:
 
 ```
-Suggested branch: feat/login
-
-Accept? (yes/no/custom name)
+AskUserQuestion({
+  questions: [{
+    question: "Which branch name should we use?",
+    header: "Branch name",
+    options: [
+      { label: "feat/login", description: "Suggested — follows feat/ convention (Recommended)" },
+      { label: "feat/login/260607", description: "Same with date suffix to avoid conflicts" },
+    ]
+  }]
+})
 ```
 
-- **yes:** Proceed with `feat/login`
-- **no:** Ask again with refined suggestion
-- **custom:** Use user's input, validate against detected convention
+- If user picks an option: use it as-is
+- If user picks "Other" and types a custom name: use their input, validate against detected convention
 
-**If convention unclear:** Ask user directly which prefix to use.
+**If convention unclear:** Use `AskUserQuestion` to ask which prefix to use before suggesting.
 
 ## Step 4: Directory Setup
 
@@ -197,7 +203,7 @@ User: /using-git-worktrees, let's implement login feature
 
 [Step 1] Work description: "implement login feature"
 [Step 2] Detect convention from CLAUDE.md: "feat/"
-[Step 3] Suggest: "feat/login" - Confirm? → User: yes
+[Step 3] AskUserQuestion → options: feat/login (Recommended), feat/login/260607 → User picks feat/login
 [Step 4] Directory: .worktree/
 [Step 5] Check ignore - git check-ignore .worktree → not ignored
          Add to .git/info/exclude
