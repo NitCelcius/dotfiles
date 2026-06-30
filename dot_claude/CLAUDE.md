@@ -9,6 +9,7 @@ This skill gates implementation: do not write code or edit files until the skill
 ## Tooling
 
 - Run Python via `uv run python`, not `python3` directly
+- Install Python packages via `uv add <pkg>` (CLI), not by editing `pyproject.toml` directly — exception: when a specific version constraint is needed, edit the file
 - Use `git mv` for all file/directory moves to preserve history
 
 ## Environment
