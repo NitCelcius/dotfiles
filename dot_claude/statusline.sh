@@ -18,7 +18,7 @@ GLYPH_BRANCH=$'\ue0a0'       # branch アイコン
 CONTEXT_WINDOW_LIMIT=200000  # context window の量をハードコード
 
 FG_TEXT=255; FG_ADD=77; FG_DEL=203          # 文字色（白 / +緑 / -赤）
-BG_FOLDER=24; BG_BRANCH=31; BG_DIFF=238; BG_MODEL=54
+BG_FOLDER=24; BG_BRANCH=31; BG_DIFF=238; BG_MODEL=54; BG_PR=25
 BG_GREEN=22; BG_YELLOW=58; BG_RED=52; BG_PURPLE=57; BG_GRAY=240
 
 # ===== 汎用ヘルパー =====
@@ -140,6 +140,11 @@ branch_name=$(git -C "$current_dir" branch --show-current 2>/dev/null)
 [ -n "$branch_name" ] && branch_name=$(format_branch "$branch_name")
 branch_text="$GLYPH_BRANCH $branch_name"; branch_bg=$BG_BRANCH
 
+# GitHub PR number
+pr_text=""; pr_bg=$BG_PR
+pr_number=$(gh --timeout 2s -C "$current_dir" pr view --json number -q '.number' 2>/dev/null)
+[ -n "$pr_number" ] && pr_text="#${pr_number}"
+
 # 変更行（+緑 -赤）
 diff_text=""; diff_bg=$BG_DIFF
 if [ "$lines_added" -gt 0 ] || [ "$lines_removed" -gt 0 ]; then
@@ -200,6 +205,7 @@ model_text="🤖 ${model_family}"; model_bg=$BG_MODEL
 line1=""; line1_bg=""
 emit line1 line1_bg "$folder_text" "$FG_TEXT" "$folder_bg"
 [ -n "$branch_name" ]               && emit line1 line1_bg "$branch_text"  "$FG_TEXT" "$branch_bg"
+[ -n "$pr_text" ]                   && emit line1 line1_bg "$pr_text"      "$FG_TEXT" "$pr_bg"
 [ -n "$diff_text" ]                 && emit line1 line1_bg "$diff_text"    "$FG_TEXT" "$diff_bg"
 close_line line1 line1_bg
 
