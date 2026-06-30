@@ -4,6 +4,8 @@
     "defaultMode": "default"
   },
   "model": "sonnet",
+  "enableWorkflows": true,
+  "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
