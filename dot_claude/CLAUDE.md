@@ -2,7 +2,7 @@
 
 Invoke the `hear-my-plan` skill (via the Skill tool) before responding when either:
 - The user runs `/hear-my-plan` explicitly, or
-- The user's message is ~150+ words describing a plan, or contains the phrase "let's discuss"
+- The user's message is ~120+ words describing a plan, or contains the phrase "let's discuss"
 
 This skill gates implementation: do not write code or edit files until the skill's confirmation step is cleared.
 
