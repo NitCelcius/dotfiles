@@ -80,6 +80,9 @@
   },
   "agent_servers": {
     "claude-acp": {
+      "default_config_options": {
+        "mode": "default"
+      },
       "type": "registry",
     },
     "github-copilot-cli": {
