@@ -96,7 +96,7 @@
     },
   },
   "terminal": {
-    "font_family": "HackGen35",
+    "font_family": "HackGen35 Console NF",
     "env": {},
   },
   "telemetry": {
