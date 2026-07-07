@@ -93,6 +93,13 @@
     },
   },
   {
+    "context": "ProjectPanel",
+    "unbind": {
+      "ctrl-k ctrl-shift-f": "project_panel::NewSearchInDirectory",
+    },
+  },
+  {
+    "context": "Editor",
     "bindings": {
       "ctrl-k ctrl-f": "workspace::NewSearch",
     },
@@ -119,6 +126,15 @@
     "context": "Workspace",
     "unbind": {
       "ctrl-alt-b": "workspace::ToggleRightDock"
+    }
+  },
+  {
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-t": [
+        "terminal::SendKeystroke",
+        "ctrl-t"
+      ]
     }
   }
 ]
