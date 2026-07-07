@@ -3,7 +3,6 @@
     "allow": [],
     "defaultMode": "default"
   },
-  "model": "sonnet",
   "enableWorkflows": true,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
@@ -22,8 +21,8 @@
     "notion@claude-plugins-official": true
   },
   "effortLevel": "medium",
-  "awaySummaryEnabled": false,
   "promptSuggestionEnabled": false,
+  "awaySummaryEnabled": false,
   "autoUpdatesChannel": "latest",
   "tui": "fullscreen",
   "theme": "auto",
