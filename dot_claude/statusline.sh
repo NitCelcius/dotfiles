@@ -15,7 +15,6 @@ ESC=$'\033'
 GLYPH_ARROW=$'\ue0b0'        # 実線セパレータ
 GLYPH_ARROW_SOFT=$'\ue0b1'   # 細セパレータ（同色隣接時）
 GLYPH_BRANCH=$'\ue0a0'       # branch アイコン
-CONTEXT_WINDOW_LIMIT=200000  # context window の量をハードコード
 
 FG_TEXT=255; FG_ADD=77; FG_DEL=203          # 文字色（白 / +緑 / -赤）
 BG_FOLDER=24; BG_BRANCH=31; BG_DIFF=238; BG_MODEL=54; BG_PR=25
@@ -90,6 +89,12 @@ model_name=$(printf '%s' "$input"          | jq -r '.model.display_name // "?"')
 current_dir=$(printf '%s' "$input"          | jq -r '.workspace.current_dir // .cwd // "."')
 session_cost_usd=$(printf '%s' "$input"     | jq -r '.cost.total_cost_usd // empty')
 context_used_percent=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty')
+context_window_size=$(printf '%s' "$input"  | jq -r '.context_window.context_window_size // empty')
+# 実トークン数は current_usage の合計が正（%×窓幅は 1% 刻みに丸められていて粗い）
+context_tokens_exact=$(printf '%s' "$input" | jq -r '
+  (.context_window.current_usage // empty)
+  | ((.input_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0))
+  | select(. > 0)')
 quota_used_percent=$(printf '%s' "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
 quota_resets_at=$(printf '%s' "$input"      | jq -r '.rate_limits.five_hour.resets_at // empty')
 
@@ -151,14 +156,20 @@ if [ "$lines_added" -gt 0 ] || [ "$lines_removed" -gt 0 ]; then
   diff_text="📝 ${ESC}[38;5;${FG_ADD}m+${lines_added}${ESC}[38;5;${FG_DEL}m -${lines_removed}${ESC}[38;5;${FG_TEXT}m"
 fi
 
-# context（推定トークン k + %）
+# context（トークン k [+ %]）
+# 窓幅が来ていれば % と色（残量警告）まで出す。来ていなければ「何に対する割合か」が
+# 決まらないので、%を伏せてトークン数だけ・色は緑固定にする（見かけの警告を出さない）。
 context_text=""; context_bg=$BG_GREEN
-if [ -n "$context_used_percent" ]; then
+if [ -n "$context_window_size" ] && [ -n "$context_used_percent" ]; then
   context_used_int=$(round_int "$context_used_percent")
-  context_tokens=$(awk -v p="$context_used_percent" -v limit="$CONTEXT_WINDOW_LIMIT" 'BEGIN{printf "%d", p/100*limit}')
+  context_tokens="$context_tokens_exact"
+  [ -z "$context_tokens" ] && context_tokens=$(awk -v p="$context_used_percent" -v limit="$context_window_size" 'BEGIN{printf "%d", p/100*limit}')
   context_tokens_k=$(awk -v t="$context_tokens" 'BEGIN{printf "%d", t/1000 + 0.5}')
   context_bg=$(context_fill_bg "$context_used_int")
   context_text="🧠 ${context_tokens_k}k ${context_used_int}%"
+elif [ -n "$context_tokens_exact" ]; then
+  context_tokens_k=$(awk -v t="$context_tokens_exact" 'BEGIN{printf "%d", t/1000 + 0.5}')
+  context_text="🧠 ${context_tokens_k}k"
 fi
 
 # 5h セッション（残時間 + 残%、色は消費ペース）
@@ -210,7 +221,7 @@ emit line1 line1_bg "$folder_text" "$FG_TEXT" "$folder_bg"
 close_line line1 line1_bg
 
 line2=""; line2_bg=""
-[ -n "$context_text" ]              && emit line2 line1_bg "$context_text" "$FG_TEXT" "$context_bg"
+[ -n "$context_text" ]              && emit line2 line2_bg "$context_text" "$FG_TEXT" "$context_bg"
 [ -n "$session_text" ]              && emit line2 line2_bg "$session_text" "$FG_TEXT" "$session_bg"
 [ -n "$burn_text" ]                 && emit line2 line2_bg "$burn_text"    "$FG_TEXT" "$burn_bg"
 [ -n "$cache_read_share_percent" ]  && emit line2 line2_bg "$cache_text"   "$FG_TEXT" "$cache_bg"
