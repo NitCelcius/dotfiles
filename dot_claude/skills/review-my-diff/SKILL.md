@@ -36,4 +36,4 @@ report.
    Number every item with a single sequence running across all three categories.
    Do not restart numbering per category — the user replies with bare numbers, so
    each number must point at exactly one item.
-5. Do not make any changes. Report only.
+4. Do not make any changes. Report only.
