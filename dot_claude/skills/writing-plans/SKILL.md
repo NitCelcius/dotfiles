@@ -111,6 +111,12 @@ These are **plan failures** — never write them:
 
 It IS acceptable to write "Pattern: same as Task N — apply X" when the code is genuinely identical.
 
+## Language
+
+When writing the plan in Japanese, do not use dash characters (—, –, ―) and do not
+insert English words that are not strictly necessary. This applies to the
+generated document, not to this skill file.
+
 ## Remember
 - Exact file paths always
 - Exact commands with expected output
