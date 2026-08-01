@@ -68,14 +68,37 @@
     },
   },
   "agent": {
+    "show_turn_stats": true,
+    "thinking_display": "auto",
+    "enable_feedback": false,
     "dock": "right",
     "use_modifier_to_send": true,
     "default_model": {
-      "provider": "google",
-      "model": "gemini-3.1-pro-preview",
+      "effort": "high",
+      "provider": "zed.dev",
+      "model": "claude-sonnet-5",
       "enable_thinking": true,
     },
-    "favorite_models": [],
+    "favorite_models": [
+      {
+        "provider": "zed.dev",
+        "model": "claude-sonnet-5",
+        "enable_thinking": true,
+        "effort": "high"
+      },
+      {
+        "provider": "openai-subscribed",
+        "model": "gpt-5.6-sol",
+        "enable_thinking": true,
+        "effort": "low"
+      },
+      {
+        "provider": "zed.dev",
+        "model": "gemini-3.5-flash",
+        "enable_thinking": true,
+        "effort": "MEDIUM"
+      }
+    ],
     "model_parameters": [],
   },
   "agent_servers": {
