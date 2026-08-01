@@ -97,6 +97,9 @@ digraph brainstorming {
 
 - Write the validated design to `docs/specs/YYYY-MM-DD-<topic>-design.md`
 - Commit the design document to git
+- When writing in Japanese, do not use dash characters (—, –, ―) and do not insert
+  English words that are not strictly necessary. This applies to the generated
+  document, not to this skill file.
 
 **Spec Self-Review:**
 
