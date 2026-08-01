@@ -65,14 +65,25 @@ Do not commit a workaround silently. Get explicit guidance first.
 
 **Goal:** [One sentence describing what this builds]
 
+**Status:** [Where the work stands right now: last completed task, what is next]
+
 **Architecture:** [2-3 sentences about approach]
 
 **Affected files:**
 - `exact/path/to/file.ext` — what changes
 - `exact/path/to/other.ext` — what changes
 
+**Invariants:** [Existing abstractions, public interfaces, or output compatibility
+that must NOT change while executing this plan]
+
+**Deferred gates:** [Verification steps that could not be run yet, and why]
+
 ---
 ```
+
+The header is the part that gets re-read. Keep it short enough to be useful as a
+range read, and update **Status** and **Deferred gates** as tasks complete. A
+later session reads this block first and only then pulls in the tasks it needs.
 
 ## Task Structure
 
