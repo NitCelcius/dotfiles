@@ -1,11 +1,19 @@
 ---
 name: draft-pr
-description: Use when ready to open a draft PR — runs commit/lint/signature checks in parallel, then creates a draft PR with a generated title and body.
+description: Use when ready to open a draft PR — runs commit log, lint, and signature checks in parallel, then creates a draft PR with a generated title and body.
 ---
 
 # Draft PR
 
 Run pre-PR checks in parallel, report findings in one message, then create a draft PR.
+
+Unsigned commits mid-work are expected — the signing agent drops out often and the
+work does not stop for it. But the merge is rebase & fast-forward, so GitHub does
+not sign anything on the way in: whatever is unsigned here stays unsigned on `main`.
+
+PR time is therefore the one place signing gets reconciled. Report unsigned commits
+here — once, as a single line with the count — and offer to re-sign. Do not treat it
+as a blocker, and do not ask again if the user declines.
 
 ## Flow
 
@@ -41,15 +49,19 @@ jq -r '.scripts | to_entries[] | select(.key | test("lint")) | "\(.key): \(.valu
 
 If a lint script is found, run it. Report errors with fix suggestions. If no `package.json` or no lint script, skip silently.
 
-**c) Signature**
+**c) Signature count**
 ```bash
-git log --show-signature -1
+git log main..HEAD --pretty=%G? | grep -c '^N' || true
 ```
-If the latest commit is unsigned, ask:
-> "The latest commit is unsigned. Do you want to sign it in your terminal before continuing, or skip signing?"
+Report as one line: `N of M commits unsigned — re-sign before merge?` Since the merge
+is rebase & ff, GitHub will not sign these on the way in.
 
-Note: Claude Code cannot connect to the Bitwarden SSH agent, so the user must
-perform signing in their own terminal.
+To re-sign the whole branch in one pass, if the user wants it:
+```bash
+git rebase --exec 'git commit --amend --no-edit -S' main
+```
+This requires a working signing agent in the user's own terminal. If it is still down,
+say so once and continue — this never blocks the PR.
 
 ## Step 2: Report or Skip
 
