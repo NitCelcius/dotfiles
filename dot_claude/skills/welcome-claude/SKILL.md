@@ -38,6 +38,8 @@ Run these checks in parallel:
 # Languages present
 ls *.py pyproject.toml requirements.txt uv.lock 2>/dev/null
 ls *.ts *.tsx tsconfig.json package.json 2>/dev/null
+# Unity project
+ls ProjectSettings/ProjectVersion.txt 2>/dev/null
 ```
 
 Also check `pyproject.toml` or `requirements.txt` for framework dependencies:
@@ -45,6 +47,7 @@ Also check `pyproject.toml` or `requirements.txt` for framework dependencies:
 - `pytest` → apply pytest block
 - `torch` / `tensorflow` / `keras` → apply ML training block
 - `git lfs` entries in `.gitattributes` → apply LFS block
+- `ProjectSettings/ProjectVersion.txt` present → apply Unity block
 
 ## Step 4 — Python tooling: syntax-check hook and formatter gate (only if Python detected)
 
@@ -140,6 +143,22 @@ If the `py_compile` hook from Step 4A was **not** successfully added (e.g. user 
 
 - Large binary files (check `.gitattributes` for tracked patterns) are stored via Git LFS — verify LFS path syntax before committing
 - Do not `git add` LFS-tracked files without confirming `git lfs` is initialised in the current clone
+```
+
+---
+
+### Unity
+
+Unity-MCP skills are user-level (`~/.claude/skills/`), not per-project, so what's installed varies by machine. Check before writing the block:
+
+- `~/.claude/skills/unity-mcp-core/` exists → split setup is installed. Point at `unity-mcp-core` first (editor-state/compile/batch/console basics, needed before any MCP call), then the domain skill matching the task at hand (`unity-mcp-scene-objects`, `unity-mcp-scripting`, `unity-mcp-assets-materials`, `unity-mcp-ui`, `unity-mcp-camera-graphics`, `unity-mcp-testing-editor`, `unity-mcp-packages-docs`).
+- Else `~/.claude/skills/unity-mcp-skill/` exists → point at that skill instead, but flag that it's synced by the Unity MCP plugin (look for a `.unity-mcp-skill-sync` marker file) — don't hand-edit it, changes can be silently overwritten on the next plugin sync.
+- Neither exists → skip the block entirely; don't invent a skill reference that isn't installed.
+
+```markdown
+## Unity (MCP)
+
+Unity Editor automation runs through `mcp__UnityMCP__*`, with the Editor open. [Insert whichever skill pointer applies from the check above — name the actual skill(s) found on this machine.]
 ```
 
 ---
