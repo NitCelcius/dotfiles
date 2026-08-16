@@ -1,1 +1,13 @@
 .gitconfig.local
+
+# Unity-MCP skills are optional and project-specific — welcome-claude copies
+# them into a Unity project's local .claude/skills/ on demand instead of
+# chezmoi applying them globally to every machine.
+.claude/skills/unity-mcp-core
+.claude/skills/unity-mcp-scene-objects
+.claude/skills/unity-mcp-scripting
+.claude/skills/unity-mcp-assets-materials
+.claude/skills/unity-mcp-ui
+.claude/skills/unity-mcp-camera-graphics
+.claude/skills/unity-mcp-testing-editor
+.claude/skills/unity-mcp-packages-docs
