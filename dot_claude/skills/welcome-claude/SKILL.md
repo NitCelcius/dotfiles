@@ -47,7 +47,7 @@ Also check `pyproject.toml` or `requirements.txt` for framework dependencies:
 - `pytest` → apply pytest block
 - `torch` / `tensorflow` / `keras` → apply ML training block
 - `git lfs` entries in `.gitattributes` → apply LFS block
-- `ProjectSettings/ProjectVersion.txt` present → apply Unity block
+- `ProjectSettings/ProjectVersion.txt` present → run Step 4C (Unity-MCP skill install), then apply Unity block
 
 ## Step 4 — Python tooling: syntax-check hook and formatter gate (only if Python detected)
 
@@ -77,6 +77,21 @@ Instead, check whether a git-level pre-commit gate already enforces formatting:
 
 - **Gate exists:** do nothing further — it already covers every path to a commit (yours, Claude's, `/draft-pr`'s). Do not add a formatting instruction to CLAUDE.md; it would be redundant.
 - **No gate exists:** do not write a soft "run the formatter before committing" instruction into CLAUDE.md either — Claude can't enforce that on commits it didn't make. Instead, surface a one-time suggestion to the user, e.g. "This repo uses `<formatter>` but has no pre-commit gate running it — want one set up?", and leave the decision to them.
+
+---
+
+## Step 4C — Unity-MCP skill install (only if Unity detected)
+
+The `unity-mcp-*` skills (`unity-mcp-core` + 7 domain skills) are optional and project-local — they live in the dotfiles source but are not chezmoi-applied globally, so a fresh machine or a non-Unity project never carries them. Install them into *this* project only:
+
+1. Confirm `dot_claude/skills/unity-mcp-core` isn't already present at `.claude/skills/unity-mcp-core` in this repo — skip the rest of this step if it is.
+2. Resolve the dotfiles source: run `chezmoi source-path`.
+   - If chezmoi isn't installed or isn't initialized (command fails), tell the user: "Unity project detected, but I can't find the dotfiles checkout (chezmoi source-path failed) to copy the unity-mcp-* skills from — install them manually or make chezmoi available, then re-run welcome-claude." Skip the rest of this step; still write the Unity block in Step 5 if any of these skills are already present locally.
+3. Copy `unity-mcp-core` and all 7 domain skills (`unity-mcp-scene-objects`, `unity-mcp-scripting`, `unity-mcp-assets-materials`, `unity-mcp-ui`, `unity-mcp-camera-graphics`, `unity-mcp-testing-editor`, `unity-mcp-packages-docs`) from `<source-path>/dot_claude/skills/` into this project's `.claude/skills/`.
+4. Add each copied skill directory to `.git/info/exclude` (not `.gitignore` — these are local tooling, not project source; see the dotfiles convention). Create `.claude/skills/` and `.git/info/exclude` if they don't exist yet.
+5. Note in your summary at the end which skills were installed.
+
+This does **not** apply to `unity-mcp-skill` (the older monolithic one) — that one is vendored and kept in sync by the Unity MCP Unity-package itself, independent of chezmoi and this step. If `.claude/skills/unity-mcp-skill/` already exists (with a `.unity-mcp-skill-sync` marker), leave it alone.
 
 ---
 
@@ -149,16 +164,16 @@ If the `py_compile` hook from Step 4A was **not** successfully added (e.g. user 
 
 ### Unity
 
-Unity-MCP skills are user-level (`~/.claude/skills/`), not per-project, so what's installed varies by machine. Check before writing the block:
+Check `.claude/skills/` in this project (after Step 4C has run) before writing the block:
 
-- `~/.claude/skills/unity-mcp-core/` exists → split setup is installed. Point at `unity-mcp-core` first (editor-state/compile/batch/console basics, needed before any MCP call), then the domain skill matching the task at hand (`unity-mcp-scene-objects`, `unity-mcp-scripting`, `unity-mcp-assets-materials`, `unity-mcp-ui`, `unity-mcp-camera-graphics`, `unity-mcp-testing-editor`, `unity-mcp-packages-docs`).
-- Else `~/.claude/skills/unity-mcp-skill/` exists → point at that skill instead, but flag that it's synced by the Unity MCP plugin (look for a `.unity-mcp-skill-sync` marker file) — don't hand-edit it, changes can be silently overwritten on the next plugin sync.
-- Neither exists → skip the block entirely; don't invent a skill reference that isn't installed.
+- `unity-mcp-core/` present → point at it first (editor-state/compile/batch/console basics, needed before any MCP call), then the domain skill matching the task at hand (`unity-mcp-scene-objects`, `unity-mcp-scripting`, `unity-mcp-assets-materials`, `unity-mcp-ui`, `unity-mcp-camera-graphics`, `unity-mcp-testing-editor`, `unity-mcp-packages-docs`).
+- Else `unity-mcp-skill/` present (installed independently by the Unity MCP plugin) → point at that instead, and note it's plugin-synced — don't hand-edit it, changes can be silently overwritten on the next plugin sync.
+- Neither present (e.g. Step 4C couldn't reach the dotfiles source) → skip the block entirely; don't invent a skill reference that isn't installed.
 
 ```markdown
 ## Unity (MCP)
 
-Unity Editor automation runs through `mcp__UnityMCP__*`, with the Editor open. [Insert whichever skill pointer applies from the check above — name the actual skill(s) found on this machine.]
+Unity Editor automation runs through `mcp__UnityMCP__*`, with the Editor open. [Insert whichever skill pointer applies from the check above — name the actual skill(s) installed in this project.]
 ```
 
 ---
