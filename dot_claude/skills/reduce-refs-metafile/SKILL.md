@@ -13,11 +13,14 @@ directories** that exist on the volume — not their size. A dev tree is typical
 the lever is **collapsing file count**: delete cache that rebuilds on demand, and
 zip idle projects into one file each.
 
-Three moves, biggest/safest first:
+Moves, biggest/safest first — prune touches the global caches twice, since each
+round of deletion elsewhere on disk can unreference more of the shared store:
 1. **Purge regenerable cache** in idle projects — self-healing, no source lost.
 2. **Prune global package-manager caches** (pnpm store, uv cache, similar) — safe,
    tool-native, reclaims unreferenced objects without touching active projects.
 3. **Archive idle projects** off-drive as verified zips, then delete originals.
+4. **Prune global caches again** — archiving/removing more projects frees more
+   unreferenced store entries than the first pass could reach.
 
 Windows / PowerShell / 7-Zip specific. Scripts live in `scripts/` and run in order.
 
@@ -38,9 +41,10 @@ files (Metafile pressure comes from *count*, not size).
 | 2. Activity | `2-activity.ps1 -Root D:\source` | true last-edit date per project → `activity.csv` |
 | 3. Find targets | `3-find-purge-targets.ps1 -PurgeDays 90` | list cache dirs in idle projects → `purge-targets.txt` |
 | 4. Purge | `4-purge.ps1` then `-Execute` | delete those dirs (dry-run first) |
-| 5. Archive | `5-archive.ps1 -ArchiveDays 180 -ArchiveRoot C:\...\Archive` | zip+verify idle projects off-drive |
-| 6. Remove originals | `6-remove-archived.ps1 -Execute` | **irreversible** — delete archived folders |
-| 7. Global caches | `pnpm store prune`, `uv cache prune` | see [Global Package-Manager Caches](#global-package-manager-caches) — optional, complementary to steps 1-4 |
+| 5. Global caches (optional) | `pnpm store prune`, `uv cache prune` | run right after step 4 — see [Global Package-Manager Caches](#global-package-manager-caches) |
+| 6. Archive (optional) | `5-archive.ps1 -ArchiveDays 180 -ArchiveRoot C:\...\Archive` | zip+verify idle projects off-drive |
+| 7. Remove originals (optional) | `6-remove-archived.ps1 -Execute` | **irreversible** — delete archived folders |
+| 8. Global caches again (optional) | `pnpm store prune`, `uv cache prune` | re-run after step 7 — archiving/removal frees more store entries than step 5 alone caught |
 
 All scripts share a `-WorkDir` (default `%TEMP%\refs-metafile`) holding the CSVs
 and logs. Pass the same one to every step.
@@ -65,17 +69,26 @@ These are the judgment calls that keep it from destroying real work:
   leaves the target drive (and frees its space).
 - **Archives keep `.git`, exclude regenerable dirs.** History is preserved;
   node_modules/venvs are not (they rebuild).
-- **Verify before delete, twice.** Step 5 runs `7z t` after zipping; step 6
-  re-runs `7z t` immediately before deleting each source. No verify → no delete.
-- **Deletion is gated.** Steps 4 and 6 are dry-run until `-Execute`. Get explicit
-  human approval before `-Execute` on step 6 (source removal).
+- **Verify before delete, twice.** `5-archive.ps1` runs `7z t` after zipping;
+  `6-remove-archived.ps1` re-runs `7z t` immediately before deleting each
+  source. No verify → no delete.
+- **Deletion is gated.** `4-purge.ps1` and `6-remove-archived.ps1` are dry-run
+  until `-Execute`. Get explicit human approval before `-Execute` on
+  `6-remove-archived.ps1` (source removal). Global cache pruning (steps 5 and 8)
+  is safe enough to run without that gate — it never removes anything a current
+  lockfile/manifest still references — but confirm with the user before each
+  pass anyway, since it's still an unprompted deletion on their disk.
 
 ## Global Package-Manager Caches
 
 Per-project purge (steps 1-4) skips global, content-addressable package stores —
 `pnpm store` (`pnpm store path`), `uv cache` (`uv cache dir`), and similar
 (`npm cache`, `yarn cache`, `~/.cargo/registry`, pip's cache, etc.). These are
-regenerable, live outside any single project, and are often surprisingly large:
+regenerable, live outside any single project, and are often surprisingly large.
+
+Run this twice — once right after step 4 (purge), once again after step 7
+(remove archived originals) — because each round of deletion elsewhere on disk
+unreferences more of the shared store than the previous round could see:
 
 1. Locate: `pnpm store path`, `uv cache dir`.
 2. Measure before pruning (same robocopy `/L` count trick + `Get-ChildItem -Recurse
@@ -87,7 +100,8 @@ regenerable, live outside any single project, and are often surprisingly large:
 
 Prune is lower-risk than the per-project purge (step 4) — it never touches an
 active project's `node_modules`/`.venv`, only the shared store those symlink/
-hardlink into. Safe to run any time, independent of any `PurgeDays` cutoff.
+hardlink into. Safe to run any time, independent of any `PurgeDays` cutoff — but
+still confirm with the user before each pass (see Non-Negotiable Safety Rules).
 
 ## Key Techniques
 
