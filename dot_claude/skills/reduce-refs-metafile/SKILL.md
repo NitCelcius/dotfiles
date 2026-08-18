@@ -13,9 +13,11 @@ directories** that exist on the volume — not their size. A dev tree is typical
 the lever is **collapsing file count**: delete cache that rebuilds on demand, and
 zip idle projects into one file each.
 
-Two moves, biggest first:
+Three moves, biggest/safest first:
 1. **Purge regenerable cache** in idle projects — self-healing, no source lost.
-2. **Archive idle projects** off-drive as verified zips, then delete originals.
+2. **Prune global package-manager caches** (pnpm store, uv cache, similar) — safe,
+   tool-native, reclaims unreferenced objects without touching active projects.
+3. **Archive idle projects** off-drive as verified zips, then delete originals.
 
 Windows / PowerShell / 7-Zip specific. Scripts live in `scripts/` and run in order.
 
@@ -38,6 +40,7 @@ files (Metafile pressure comes from *count*, not size).
 | 4. Purge | `4-purge.ps1` then `-Execute` | delete those dirs (dry-run first) |
 | 5. Archive | `5-archive.ps1 -ArchiveDays 180 -ArchiveRoot C:\...\Archive` | zip+verify idle projects off-drive |
 | 6. Remove originals | `6-remove-archived.ps1 -Execute` | **irreversible** — delete archived folders |
+| 7. Global caches | `pnpm store prune`, `uv cache prune` | see [Global Package-Manager Caches](#global-package-manager-caches) — optional, complementary to steps 1-4 |
 
 All scripts share a `-WorkDir` (default `%TEMP%\refs-metafile`) holding the CSVs
 and logs. Pass the same one to every step.
@@ -67,6 +70,25 @@ These are the judgment calls that keep it from destroying real work:
 - **Deletion is gated.** Steps 4 and 6 are dry-run until `-Execute`. Get explicit
   human approval before `-Execute` on step 6 (source removal).
 
+## Global Package-Manager Caches
+
+Per-project purge (steps 1-4) skips global, content-addressable package stores —
+`pnpm store` (`pnpm store path`), `uv cache` (`uv cache dir`), and similar
+(`npm cache`, `yarn cache`, `~/.cargo/registry`, pip's cache, etc.). These are
+regenerable, live outside any single project, and are often surprisingly large:
+
+1. Locate: `pnpm store path`, `uv cache dir`.
+2. Measure before pruning (same robocopy `/L` count trick + `Get-ChildItem -Recurse
+   | Measure-Object -Property Length -Sum` for size).
+3. Prune — tool-native, safe by design (only removes objects nothing currently
+   references, unlike a raw purge): `pnpm store prune`, `uv cache prune`.
+4. Measure after; only escalate to wholesale deletion (`pnpm store path | rm -rf`,
+   `uv cache clean`) if prune underperforms for your case.
+
+Prune is lower-risk than the per-project purge (step 4) — it never touches an
+active project's `node_modules`/`.venv`, only the shared store those symlink/
+hardlink into. Safe to run any time, independent of any `PurgeDays` cutoff.
+
 ## Key Techniques
 
 - **Counting fast:** `robocopy <path> <dummy> /L /E /NFL /NDL` is far faster than
@@ -83,9 +105,11 @@ These are the judgment calls that keep it from destroying real work:
 - Ranking by folder mtime → deletes an "old" project that's actually current.
 - Blanket-deleting any dir named `Library`/`build` → data loss.
 - Archiving onto the same drive → file count barely drops.
-- `pnpm store prune` after manually deleting node_modules removes 0 (its
-  bookkeeping still thinks packages are referenced). To reclaim the store,
-  delete it wholesale — it's pure cache — accepting a re-download on next install.
+- Assuming prune won't reclaim much and jumping straight to wholesale deletion of
+  a global cache. Measured counter-example: `pnpm store prune` reclaimed 58.8k of
+  177.9k files (66%, 3.25 GB); `uv cache prune` reclaimed 268.8k of 365.3k files
+  (74%, 9.18 GB) — both purely from already-idle project purges elsewhere on the
+  same machine, no manual store surgery needed. Always try prune first.
 - Deleting archived originals before re-verifying the zip.
 
 ## Real-World Impact
@@ -94,3 +118,11 @@ First run on a 2.8M-file Dev Drive: `D:\source` went 1.94M → 0.83M files
 (−57%, ~1.1M files) from cache purge alone, no source touched; archiving 62 idle
 projects queued another ~192K files for removal. Target: cut the 6 GB Metafile
 footprint proportionally.
+
+Second run, same machine, after that purge had already run: per-project purge on
+`D:\source` (81 candidate dirs, `PurgeDays 180`) removed 50 cache dirs, 0 failures.
+Global caches on top of that: `pnpm store prune` 177,952 → 119,176 files (−58,776,
+−3.25 GB); `uv cache prune` 365,277 → 96,433 files (−268,844, −9.18 GB). System-wide
+file count (not just the store/cache dirs): 2,418,765 → 2,360,785 after the pnpm
+prune, → 2,097,995 after the uv prune — confirming both drops at the volume level,
+not just within the measured directories.
