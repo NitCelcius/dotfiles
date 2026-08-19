@@ -1,6 +1,20 @@
 {
   "permissions": {
     "allow": [],
+    "ask": [
+      "Bash(gh pr create*)",
+      "Bash(git rebase*)",
+      "Bash(git pull --rebase*)",
+      "Bash(git pull -r*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(gh pr merge*)",
+      "Bash(git branch -D*)",
+      "Bash(git push origin --delete*)",
+      "Bash(gh pr close*)",
+      "Bash(gh issue close*)"
+    ],
     "defaultMode": "default"
   },
   "enableWorkflows": true,
