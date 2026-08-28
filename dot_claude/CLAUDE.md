@@ -10,6 +10,31 @@ This skill gates implementation: do not write code or edit files until the skill
 
 Invoke the `measure-first` skill before attempting a second fix for the same symptom.
 
+## Skill: investigate-only
+
+Invoke the `investigate-only` skill when the user explicitly scopes a session to
+investigation or debugging with no edits yet (e.g. "planning only", "just look into
+this, don't touch anything"). Distinct from `hear-my-plan`, which reorganizes a long
+new-feature/idea dump — this is for archaeology/debugging sessions that end in a
+decision note, not a build plan.
+
+## Skill: verify-before-claiming
+
+Invoke the `verify-before-claiming` skill before asserting that a behavior works, is
+implemented, or is broken, when the evidence so far comes only from reading code
+rather than running it.
+
+## Skill: commit-scope-audit
+
+Invoke the `commit-scope-audit` skill before staging or committing, or before
+splitting work into multiple commits.
+
+## Skill: archaeology-fanout
+
+Invoke the `archaeology-fanout` skill for "how does X work" / trace-this-feature
+investigations in unfamiliar or large code, in place of answering from a single
+sequential pass.
+
 ## Tooling
 
 - Run Python via `uv run python`, not `python3` directly
