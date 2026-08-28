@@ -104,6 +104,16 @@ When reporting, lead with the current conclusion, the main evidence for it, and
 the weakest assumption that would overturn it. Do not blur uncertainty; say
 specifically what is still unverified.
 
+## Explaining Code
+
+When asked "how does X work" or for an explanation of behavior, answer in tiers and
+pause for go-ahead after the first one, unless full depth was already asked for:
+1. Concept — a few plain sentences on what it does, sourced from a spec/design doc
+   when one exists, not inferred from UI resource strings or naming.
+2. Boundaries — which module/layer owns what.
+3. Call chain — the concrete file:line trace.
+For a question that spans multiple layers or an unfamiliar area of a large
+codebase, use the `archaeology-fanout` skill instead of a single sequential read.
 
 ## Before Editing
 
