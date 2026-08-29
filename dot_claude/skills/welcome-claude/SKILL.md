@@ -95,6 +95,41 @@ This does **not** apply to `unity-mcp-skill` (the older monolithic one) — that
 
 ---
 
+## Step 4D — Direct-commit guard on the default branch (any git repo)
+
+The user's convention is that work reaches the default branch through a branch and a PR, not a
+direct commit. This is a *convention*, not a policy to impose — GitHub is typically not configured
+to enforce it, and the user has explicitly declined `permissions.deny` rules for it. Offer the gate
+once and take no for an answer. Never add permission rules or blocking Claude Code hooks for this.
+
+Prefer a git-level pre-commit hook over a Claude Code hook for the same reason as Step 4B: it covers
+every path to a commit — the user's, Claude's, and `/draft-pr`'s — not just the ones Claude makes.
+
+1. Skip this step entirely if any of these hold:
+   - not a git repo
+   - `.githooks/pre-commit` already exists
+   - `git config --get core.hooksPath` already resolves to a directory containing a `pre-commit`
+   - `.pre-commit-config.yaml`, `.husky/pre-commit`, or `lefthook.yml` already runs a branch check
+2. Ask once: *"Want a pre-commit hook that refuses commits made directly on `<default-branch>`?
+   It has an `ALLOW_MAIN=1` escape hatch."* If declined, do nothing and don't raise it again.
+3. If accepted, resolve the dotfiles checkout with `chezmoi source-path` and copy
+   `<source-path>/.githooks/pre-commit` into this repo's `.githooks/`. If chezmoi isn't available,
+   say so and skip — don't hand-write a substitute.
+4. Wire it up, all three of which are required:
+   - `git config core.hooksPath .githooks` — **per-clone local config, not tracked**, so it has to be
+     re-run in every clone. Say this out loud; a hook nobody enabled looks identical to one that passes.
+   - `git update-index --chmod=+x .githooks/pre-commit` — git on macOS and Linux skips a hook without
+     the executable bit and reports nothing. On Windows `core.fileMode` is off, so the bit will not be
+     recorded on its own.
+   - Add `.githooks/** text eol=lf` to `.gitattributes` if the repo normalizes with `* text=auto`;
+     otherwise a Windows checkout rewrites the shebang to `#!/bin/sh` and the hook fails silently.
+5. Verify before claiming it works: with the default branch checked out, stage something and run
+   `git commit`. Confirm it exits non-zero and the commit does not land. A hook that was never
+   enabled produces exactly the same output as a repo with no hook at all.
+6. Note in your summary whether the guard was installed, declined, or already present.
+
+---
+
 ## Step 5 — Append convention blocks
 
 Add only the blocks that match the detected stack. Do not add blocks for absent languages or frameworks.
