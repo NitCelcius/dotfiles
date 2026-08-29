@@ -1,0 +1,30 @@
+#!/bin/sh
+# Refuse commits made directly on a protected branch.
+#
+# Escape hatch:  ALLOW_MAIN=1 git commit ...
+# Prefer that over --no-verify, which disables *every* hook in this repo
+# (formatter gates, signing checks, anything added later) rather than just
+# this one check.
+
+[ -n "$ALLOW_MAIN" ] && exit 0
+
+# Detached HEAD has no branch to guard.
+branch=$(git symbolic-ref --short -q HEAD) || exit 0
+
+case "$branch" in
+  main|master) ;;
+  *) exit 0 ;;
+esac
+
+count=$(git diff --cached --name-only | wc -l | tr -d ' ')
+
+{
+  printf '\n  !! refusing to commit directly on %s (%s staged file(s))\n\n' "$branch" "$count"
+  git diff --cached --name-status | sed 's/^/       /'
+  printf '\n  Move the work to a branch instead:\n'
+  printf '      git switch -c feat/<name>\n\n'
+  printf '  Or, if this commit really does belong on %s:\n' "$branch"
+  printf '      ALLOW_MAIN=1 git commit ...\n\n'
+} >&2
+
+exit 1

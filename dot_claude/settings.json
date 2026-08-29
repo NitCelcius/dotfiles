@@ -1,8 +1,33 @@
 {
   "permissions": {
-    "allow": [],
+    "allow": [
+      "mcp__UnityMCP__read_console",
+      "mcp__UnityMCP__find_gameobjects",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__find",
+      "mcp__claude-in-chrome__get_page_text",
+      "mcp__claude-in-chrome__read_console_messages",
+      "Bash(chezmoi diff *)",
+      "Bash(chezmoi source-path *)",
+      "Bash(git check-ignore *)"
+    ],
+    "deny": [
+      "Bash(git push --force)",
+      "Bash(git push --force *)",
+      "Bash(git push -f)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force)",
+      "Bash(git push * --force *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)"
+    ],
+    "ask": [
+      "Bash(git push --force-with-lease*)",
+      "Bash(git push * --force-with-lease*)"
+    ],
     "defaultMode": "default"
   },
+  "model": "opus",
   "enableWorkflows": true,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
@@ -18,9 +43,19 @@
     "typescript-lsp@claude-plugins-official": true,
     "figma@claude-plugins-official": false,
     "github@claude-plugins-official": true,
-    "notion@claude-plugins-official": true
+    "notion@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "csharp-lsp@claude-plugins-official": false
   },
-  "effortLevel": "medium",
+  "effortLevel": "high",
+  "modelSettings": {
+    "claude-sonnet-5": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5": {
+      "effortLevel": "high"
+    }
+  },
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
   "autoUpdatesChannel": "latest",
