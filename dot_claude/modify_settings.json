@@ -3,11 +3,32 @@
 {{- /* live contents pass through and only the keys below are enforced:      */ -}}
 {{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
+{{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
+{{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
 {{- /* model, effortLevel, modelSettings and voice are deliberately left     */ -}}
 {{- /* alone: they are per-session choices, not configuration.              */ -}}
 {{- $keepOn := list "notion@claude-plugins-official" -}}
 {{- /* Unioned, not replaced, so rules added at runtime survive an apply. */ -}}
+{{- $allowRules := list
+      "mcp__UnityMCP__read_console"
+      "mcp__UnityMCP__find_gameobjects"
+      "mcp__claude-in-chrome__tabs_context_mcp"
+      "mcp__claude-in-chrome__find"
+      "mcp__claude-in-chrome__get_page_text"
+      "mcp__claude-in-chrome__read_console_messages"
+      "Bash(chezmoi diff *)"
+      "Bash(chezmoi source-path *)"
+      "Bash(git check-ignore *)" -}}
+{{- $denyRules := list
+      "Bash(git push --force)"
+      "Bash(git push --force *)"
+      "Bash(git push -f)"
+      "Bash(git push -f *)"
+      "Bash(git push * --force)"
+      "Bash(git push * --force *)"
+      "Bash(git push * -f)"
+      "Bash(git push * -f *)" -}}
 {{- $askRules := list
       "Bash(gh pr create*)"
       "Bash(git rebase*)"
@@ -23,6 +44,10 @@
       "Bash(gh issue close*)" -}}
 {{- $in := default "{}" (trim .chezmoi.stdin) -}}
 {{- $cfg := fromJson $in -}}
+{{- $liveAllow := default (list) (dig "permissions" "allow" (list) $cfg) -}}
+{{- $cfg = setValueAtPath "permissions.allow" (concat $liveAllow $allowRules | uniq) $cfg -}}
+{{- $liveDeny := default (list) (dig "permissions" "deny" (list) $cfg) -}}
+{{- $cfg = setValueAtPath "permissions.deny" (concat $liveDeny $denyRules | uniq) $cfg -}}
 {{- $liveAsk := default (list) (dig "permissions" "ask" (list) $cfg) -}}
 {{- $cfg = setValueAtPath "permissions.ask" (concat $liveAsk $askRules | uniq) $cfg -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
