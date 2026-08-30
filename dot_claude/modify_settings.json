@@ -1,0 +1,11 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Partial management: chezmoi owns only the keys set below.            */ -}}
+{{- /* Everything else in the live file — model, effortLevel, modelSettings, */ -}}
+{{- /* enabledPlugins, voice — is written by Claude Code at runtime and is   */ -}}
+{{- /* passed through untouched.                                            */ -}}
+{{- $in := default "{}" (trim .chezmoi.stdin) -}}
+{{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
+{{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
+{{- fromJson $in
+      | setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook)))
+      | toPrettyJson -}}
