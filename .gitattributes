@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Markdown is deployed by chezmoi to Windows destinations; keep CRLF in the
+# working tree so source and destination compare equal.
+*.md text eol=crlf
