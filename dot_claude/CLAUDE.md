@@ -103,6 +103,11 @@ specifically what is still unverified.
   self-explanatory one-off values inline — over-extraction is its own clutter. A value
   that comes from a spec (HTTP 200, a protocol magic byte, a file-format offset) gets a
   constant regardless of how many times it appears.
+- For a parameter that selects behaviour, take an enum — or the language's nearest
+  equivalent, such as a string-literal union — rather than a bool. `save(true)` tells
+  the reader nothing at the call site.
+- Keep members private unless the design needs external access. Widening visibility to
+  internal or public is a design change, not a detail: ask before making it.
 
 ## Running Code
 
