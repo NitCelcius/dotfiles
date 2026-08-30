@@ -90,6 +90,19 @@ specifically what is still unverified.
   source: `chezmoi source-path <file>` prints the source and exits 0 when managed, and
   errors when not. Edit the source and apply. Editing the deployed copy works until the
   next `chezmoi apply` silently reverts it.
+- Do not modify code outside the change you were asked for. This includes adding
+  comments to blocks you did not write or modify. Keep the changed-line count minimal.
+- When something outside that scope looks like it should change, say so at the moment
+  you notice it — not batched into the final report. Describe it, then continue the
+  original work. Do not make the change unprompted.
+
+## Code Style
+
+- Reduce nesting. Prefer early return and `continue` over an arrow-shaped body.
+- Extract recurring or meaningful values into named constants or enums. Keep
+  self-explanatory one-off values inline — over-extraction is its own clutter. A value
+  that comes from a spec (HTTP 200, a protocol magic byte, a file-format offset) gets a
+  constant regardless of how many times it appears.
 
 ## Running Code
 
