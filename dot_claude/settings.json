@@ -17,6 +17,20 @@
     ],
     "defaultMode": "default"
   },
+  "model": "opus",
+  "hooks": {
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/nitcelcius/.claude/feedback-on-compaction/feedback_on_compaction.py\" collect",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "enableWorkflows": true,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
@@ -24,24 +38,34 @@
     "command": "~/.claude/statusline.sh"
   },
   "enabledPlugins": {
-    "claude-md-management@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": false,
+    "frontend-design@claude-plugins-official": false,
     "superpowers@claude-plugins-official": false,
     "code-review@claude-plugins-official": false,
-    "playwright@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": false,
+    "typescript-lsp@claude-plugins-official": false,
     "figma@claude-plugins-official": false,
     "github@claude-plugins-official": true,
-    "notion@claude-plugins-official": true
+    "notion@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": false
   },
-  "effortLevel": "medium",
+  "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "xhigh"
+    }
+  },
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
-  "autoUpdatesChannel": "latest",
   "tui": "fullscreen",
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
   "theme": "auto",
-  "switchModelsOnFlag": false,
+  "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "voiceEnabled": true
 }
