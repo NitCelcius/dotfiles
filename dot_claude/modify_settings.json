@@ -2,15 +2,16 @@
 {{- /* Partial management. Claude Code writes this file at runtime, so the   */ -}}
 {{- /* live contents pass through and only the keys below are enforced:      */ -}}
 {{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
-{{- /*   enabledPlugins.*   — off globally; each project opts back in        */ -}}
+{{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /* model, effortLevel, modelSettings and voice are deliberately left     */ -}}
 {{- /* alone: they are per-session choices, not configuration.              */ -}}
+{{- $keepOn := list "notion@claude-plugins-official" -}}
 {{- $in := default "{}" (trim .chezmoi.stdin) -}}
 {{- $cfg := fromJson $in -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
 {{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
 {{- $cfg = setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
-{{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) false $cfg -}}
+{{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
 {{- $cfg | toPrettyJson -}}
