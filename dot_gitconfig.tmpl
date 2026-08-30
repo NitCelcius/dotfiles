@@ -15,6 +15,8 @@
 	enabled = true
 [gpg]
 	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = {{ .chezmoi.homeDir }}/.config/git/allowed_signers
 [push]
 	autoSetupRemote = true
 [alias]
