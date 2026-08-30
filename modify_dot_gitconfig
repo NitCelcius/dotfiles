@@ -1,3 +1,14 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Partial management: git appends [safe] entries to this file at     */ -}}
+{{- /* runtime, so that section is carried over from the live file        */ -}}
+{{- /* instead of being overwritten. Everything else is owned here.       */ -}}
+{{- $safe := "" -}}
+{{- $inSafe := false -}}
+{{- range splitList "\n" .chezmoi.stdin -}}
+{{-   $line := trimSuffix "\r" . -}}
+{{-   if hasPrefix "[" (trim $line) -}}{{- $inSafe = eq (trim $line) "[safe]" -}}{{- end -}}
+{{-   if and $inSafe (ne (trim $line) "") -}}{{- $safe = printf "%s%s\n" $safe $line -}}{{- end -}}
+{{- end -}}
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
@@ -43,3 +54,4 @@
 	conflicts = diff HEAD --check
 [include]
 	path = ~/.gitconfig.local
+{{ $safe -}}
