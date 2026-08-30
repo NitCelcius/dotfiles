@@ -162,6 +162,19 @@ If the `py_compile` hook from Step 4A was **not** successfully added (e.g. user 
 
 ---
 
+### Layered architecture
+
+Add this block **only** if the project already has an explicit layer structure — directories or namespaces named for layers, or a visible driver/service/UI split. Do not impose layering on a project that has none, and name the actual layers you found rather than generic ones.
+
+```markdown
+## Layer Boundaries
+
+- Each layer calls only the layer directly beneath it: [name the layers found, outermost first]
+- Keep raw mechanics — device I/O, wire formats, SQL — inside their own layer and expose domain-level operations upward
+```
+
+---
+
 ### Unity
 
 Check `.claude/skills/` in this project (after Step 4C has run) before writing the block:
@@ -174,6 +187,8 @@ Check `.claude/skills/` in this project (after Step 4C has run) before writing t
 ## Unity (MCP)
 
 Unity Editor automation runs through `mcp__UnityMCP__*`, with the Editor open. [Insert whichever skill pointer applies from the check above — name the actual skill(s) installed in this project.]
+
+- Expose a field to the Inspector with `[SerializeField] private` — never by widening visibility
 ```
 
 ---
