@@ -1,39 +1,7 @@
 ## Skill: hear-my-plan
 
-Invoke the `hear-my-plan` skill (via the Skill tool) before responding when either:
-- The user runs `/hear-my-plan` explicitly, or
-- The user's message is ~120+ words describing a plan, or contains the phrase "let's discuss"
-
-This skill gates implementation: do not write code or edit files until the skill's confirmation step is cleared.
-
-## Skill: measure-first
-
-Invoke the `measure-first` skill before attempting a second fix for the same symptom.
-
-## Skill: investigate-only
-
-Invoke the `investigate-only` skill when the user explicitly scopes a session to
-investigation or debugging with no edits yet (e.g. "planning only", "just look into
-this, don't touch anything"). Distinct from `hear-my-plan`, which reorganizes a long
-new-feature/idea dump — this is for archaeology/debugging sessions that end in a
-decision note, not a build plan.
-
-## Skill: verify-before-claiming
-
-Invoke the `verify-before-claiming` skill before asserting that a behavior works, is
-implemented, or is broken, when the evidence so far comes only from reading code
-rather than running it.
-
-## Skill: commit-scope-audit
-
-Invoke the `commit-scope-audit` skill before staging or committing, or before
-splitting work into multiple commits.
-
-## Skill: archaeology-fanout
-
-Invoke the `archaeology-fanout` skill for "how does X work" / trace-this-feature
-investigations in unfamiliar or large code, in place of answering from a single
-sequential pass.
+Trigger `hear-my-plan` on the phrase "let's discuss" as well as on a long idea dump.
+Its gate is binding: no code, no edits, until the skill's confirmation step clears.
 
 ## Tooling
 
@@ -112,8 +80,6 @@ pause for go-ahead after the first one, unless full depth was already asked for:
    when one exists, not inferred from UI resource strings or naming.
 2. Boundaries — which module/layer owns what.
 3. Call chain — the concrete file:line trace.
-For a question that spans multiple layers or an unfamiliar area of a large
-codebase, use the `archaeology-fanout` skill instead of a single sequential read.
 
 ## Before Editing
 

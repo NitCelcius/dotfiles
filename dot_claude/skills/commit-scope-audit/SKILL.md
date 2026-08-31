@@ -26,8 +26,7 @@ multi-commit split, approved.
 ## Process
 1. Run `git status --porcelain` and `git diff --cached --stat` first. Report three
    buckets explicitly: (a) unstaged changes, (b) already-staged changes, (c)
-   untracked files. Flag anything staged that predates this session's work —
-   that's the pre-staged-file trap.
+   untracked files. Flag anything staged that predates this session's work.
 2. Confirm with the user which of these are in scope. Anything not named is out of
    scope by default.
 3. For a single commit: state the exact file list before staging.
