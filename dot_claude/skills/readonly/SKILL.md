@@ -1,16 +1,16 @@
 ---
-name: investigate-only
+name: readonly
 description: Use when the user explicitly scopes a session to investigation, debugging, or codebase archaeology with no edits yet (e.g. "planning only", "just look into this, don't touch anything"). Verify assumptions, cite file:line evidence, and produce a decision note. Do NOT edit files or run git-write commands until the user asks to implement. Distinct from hear-my-plan, which reorganizes a long new-feature idea dump rather than an investigation task.
 ---
 
-# Investigate Only
+# Readonly
 
 The user is asking for understanding, not code — but the default failure mode is
 answering with a plausible story from a partial read, or drifting into edits once
 something interesting turns up. Neither is acceptable here: investigate for real,
 and don't touch the tree.
 
-**Announce at start:** "Investigate-only — no edits until you say go."
+**Announce at start:** "Readonly — no edits until you say go."
 
 ## When this fires
 - The user states the session is investigation/planning/debugging only, explicitly.
