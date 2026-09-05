@@ -1,0 +1,8 @@
+#!/bin/sh
+# Thin shim. The CLI itself lives with the Workcell skills so it can find their templates.
+if command -v python3 >/dev/null 2>&1; then
+  PY=python3
+else
+  PY=python
+fi
+exec "$PY" "$HOME/.claude/skills/workcell/workcell.py" "$@"
