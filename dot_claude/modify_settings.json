@@ -4,6 +4,9 @@
 {{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
+{{- /*   worktree.baseRef   — Workcell executors branch from the current HEAD */ -}}
+{{- /*   permissions.additionalDirectories — the Workcell record root         */ -}}
+{{- /*   hooks.<workcell>   — removed; the Workcell plugin registers its own  */ -}}
 {{- /* model, effortLevel, modelSettings and voice are deliberately left     */ -}}
 {{- /* alone: they are per-session choices, not configuration.              */ -}}
 {{- $keepOn := list "notion@claude-plugins-official" -}}
@@ -31,4 +34,34 @@
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
+{{- /* Workcell. Executors read the main checkout's HEAD, so worktrees must  */ -}}
+{{- /* branch from it rather than the default branch.                        */ -}}
+{{- $cfg = setValueAtPath "worktree.baseRef" "head" $cfg -}}
+{{- $wcRoot := printf "%s/.local/share/workcell" .chezmoi.homeDir -}}
+{{- $liveDirs := default (list) (dig "permissions" "additionalDirectories" (list) $cfg) -}}
+{{- $cfg = setValueAtPath "permissions.additionalDirectories" (concat $liveDirs (list $wcRoot) | uniq) $cfg -}}
+{{- /* These two skills moved into the Workcell plugin, where the bare names  */ -}}
+{{- /* no longer resolve. Drop the stale keys an earlier apply left behind.   */ -}}
+{{- $so := default (dict) (get $cfg "skillOverrides") -}}
+{{- $so = unset (unset $so "executing-delegated-task") "using-workcell" -}}
+{{- if $so -}}
+{{-   $cfg = setValueAtPath "skillOverrides" $so $cfg -}}
+{{- else -}}
+{{-   $cfg = unset $cfg "skillOverrides" -}}
+{{- end -}}
+{{- /* Telemetry hooks now ship with the Workcell plugin. Strip any entry a  */ -}}
+{{- /* previous apply wrote into the live file so they do not fire twice.     */ -}}
+{{- $hooksOut := dict -}}
+{{- range $ev, $entries := (default (dict) (get $cfg "hooks")) -}}
+{{-   $kept := list -}}
+{{-   range $e := $entries -}}
+{{-     if not (contains "workcell_hook.py" (toJson $e)) -}}
+{{-       $kept = append $kept $e -}}
+{{-     end -}}
+{{-   end -}}
+{{-   if $kept -}}
+{{-     $hooksOut = set $hooksOut $ev $kept -}}
+{{-   end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks" $hooksOut $cfg -}}
 {{- $cfg | toPrettyJson -}}

@@ -1,0 +1,12 @@
+{
+  "name": "workcell",
+  "description": "Delegate bounded, independently verifiable tasks to isolated executor agents, and escalate high-impact uncertainty to a read-only advisor. Isolates exploration from the main agent's context.",
+  "version": "0.3.0",
+  "author": {
+    "name": "NitCelcius"
+  },
+  "homepage": "https://github.com/NitCelcius/dotfiles",
+  "repository": "https://github.com/NitCelcius/dotfiles",
+  "license": "MIT",
+  "keywords": ["delegation", "subagents", "worktree", "context-isolation"]
+}

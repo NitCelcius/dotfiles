@@ -1,0 +1,7 @@
+# Superseded by the Workcell plugin at .claude/skills/workcell. chezmoi does not
+# remove targets that leave the source state, so these are named explicitly or a
+# machine applying the move keeps both copies and loads the skills twice.
+.claude/workcell
+.claude/skills/using-workcell
+.claude/skills/executing-delegated-task
+.claude/skills/workcell-delegate

@@ -179,3 +179,9 @@ When starting a review and no target (worktree, branch, or PR) is explicitly spe
   one command is often enough. If a load-bearing claim has no checkable artifact,
   say so plainly rather than passing it through.
 - Commits are always made by main.
+
+### Workcell gate
+
+Do not invoke custom agents whose names start with `team-` unless the user explicitly
+invoked `/workcell-delegate` for the currently active plan. Workcell authorization ends
+when that plan completes, is abandoned, or changes to a substantially different Goal.
