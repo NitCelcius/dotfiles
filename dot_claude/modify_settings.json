@@ -3,11 +3,28 @@
 {{- /* live contents pass through and only the keys below are enforced:      */ -}}
 {{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
+{{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
 {{- /* model, effortLevel, modelSettings and voice are deliberately left     */ -}}
 {{- /* alone: they are per-session choices, not configuration.              */ -}}
 {{- $keepOn := list "notion@claude-plugins-official" -}}
+{{- /* Unioned, not replaced, so rules added at runtime survive an apply. */ -}}
+{{- $askRules := list
+      "Bash(gh pr create*)"
+      "Bash(git rebase*)"
+      "Bash(git pull --rebase*)"
+      "Bash(git pull -r*)"
+      "Bash(git push --force*)"
+      "Bash(git push -f*)"
+      "Bash(git reset --hard*)"
+      "Bash(gh pr merge*)"
+      "Bash(git branch -D*)"
+      "Bash(git push origin --delete*)"
+      "Bash(gh pr close*)"
+      "Bash(gh issue close*)" -}}
 {{- $in := default "{}" (trim .chezmoi.stdin) -}}
 {{- $cfg := fromJson $in -}}
+{{- $liveAsk := default (list) (dig "permissions" "ask" (list) $cfg) -}}
+{{- $cfg = setValueAtPath "permissions.ask" (concat $liveAsk $askRules | uniq) $cfg -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
 {{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
 {{- $cfg = setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook))) $cfg -}}
