@@ -12,3 +12,6 @@
 .claude/skills/unity-mcp-testing-editor
 .claude/skills/unity-mcp-packages-docs
 obsidian
+
+# Python bytecode from running the Workcell tests in the source tree.
+.claude/skills/workcell/**/__pycache__
