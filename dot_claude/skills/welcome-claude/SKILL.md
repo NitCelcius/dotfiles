@@ -122,7 +122,7 @@ every path to a commit — the user's, Claude's, and `/draft-pr`'s — not just 
      the executable bit and reports nothing. On Windows `core.fileMode` is off, so the bit will not be
      recorded on its own.
    - Add `.githooks/** text eol=lf` to `.gitattributes` if the repo normalizes with `* text=auto`;
-     otherwise a Windows checkout rewrites the shebang to `#!/bin/sh` and the hook fails silently.
+     otherwise a Windows checkout rewrites the shebang to `#!/bin/sh\r` and the hook fails silently.
 5. Verify before claiming it works: with the default branch checked out, stage something and run
    `git commit`. Confirm it exits non-zero and the commit does not land. A hook that was never
    enabled produces exactly the same output as a repo with no hook at all.
