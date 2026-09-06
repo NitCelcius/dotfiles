@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -11,6 +12,14 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = "workcell/event@1"
+
+# Tool names covered by the isolation backstop below, matched in hooks.json's
+# PreToolUse matcher. Mirrors the six tools Claude Code's own worktree
+# enforcement checks (Bash/PowerShell/Monitor by cwd, Edit/Write/NotebookEdit
+# by target path) - see anthropics/claude-code#33045, #39886, #83311 for why
+# isolation: "worktree" cannot be trusted to have actually taken effect.
+ISOLATION_CWD_TOOLS = {"Bash", "PowerShell", "Monitor"}
+ISOLATION_PATH_TOOLS = {"Edit", "Write", "NotebookEdit"}
 
 
 def root_dir() -> Path:
@@ -139,6 +148,88 @@ def event_record(payload: dict[str, Any]) -> dict[str, Any] | None:
     return base
 
 
+def isolation_target_dir(payload: dict[str, Any]) -> Path | None:
+    """Directory the tool call would act on, or None if this call isn't one we check."""
+    tool_name = payload.get("tool_name")
+    if tool_name in ISOLATION_CWD_TOOLS:
+        cwd = payload.get("cwd")
+        return Path(cwd).resolve() if cwd else None
+    if tool_name in ISOLATION_PATH_TOOLS:
+        tool_input = payload.get("tool_input")
+        file_path = tool_input.get("file_path") if isinstance(tool_input, dict) else None
+        return Path(file_path).resolve().parent if file_path else None
+    return None
+
+
+def git_dirs(path: Path) -> tuple[Path, Path] | None:
+    """Resolved (git-dir, git-common-dir) for `path`, or None if it isn't a git checkout."""
+    try:
+        git_dir = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--git-dir"],
+            capture_output=True, text=True, timeout=5,
+        )
+        common_dir = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--git-common-dir"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except OSError:
+        return None
+    if git_dir.returncode != 0 or common_dir.returncode != 0:
+        return None
+    return (
+        (path / git_dir.stdout.strip()).resolve(),
+        (path / common_dir.stdout.strip()).resolve(),
+    )
+
+
+def enforce_isolation(payload: dict[str, Any], root: Path) -> int:
+    """Deny a team-* agent's tool call when it targets the main checkout instead of
+    its isolated worktree.
+
+    Backstop for isolation: "worktree" silently not taking effect (the agent's own
+    frontmatter is not enough - see anthropics/claude-code#33045, #39886, #83311).
+    Fail open on anything we cannot determine; only deny on a confirmed main-checkout
+    hit, since this is a backstop layered on top of the executor's own self-check and
+    Claude Code's native enforcement, not the only line of defense.
+    """
+    if payload.get("hook_event_name") != "PreToolUse":
+        return 0
+    if not str(payload.get("agent_type", "")).startswith("team-"):
+        return 0
+    path = isolation_target_dir(payload)
+    if path is None or not path.is_dir():
+        return 0
+    dirs = git_dirs(path)
+    if dirs is None:
+        return 0
+    git_dir, common_dir = dirs
+    if git_dir != common_dir:
+        return 0  # confirmed inside a linked worktree
+
+    reason = (
+        f"This agent declares isolation: worktree but {path} resolves to the main "
+        "checkout, not a linked worktree - isolation did not take effect. Refusing "
+        "this call. Stop and report status: blocked, attention: worktree isolation "
+        "did not activate."
+    )
+    append_jsonl(root / "telemetry" / "events.jsonl", {
+        "schema": SCHEMA,
+        "timestamp": now_iso(),
+        "event": "isolation_violation_blocked",
+        "session_id": payload.get("session_id"),
+        "agent_id": payload.get("agent_id"),
+        "agent_type": payload.get("agent_type"),
+        "tool_name": payload.get("tool_name"),
+        "path": str(path),
+    })
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": reason,
+    }}, ensure_ascii=False))
+    return 2
+
+
 def archive_for_event(payload: dict[str, Any], root: Path) -> None:
     event = payload.get("hook_event_name")
     session_id = safe_id(payload.get("session_id"), "unknown-session")
@@ -193,14 +284,29 @@ def main() -> int:
         if not raw.strip():
             return 0
         payload = json.loads(raw)
-        if isinstance(payload, dict):
-            handle(payload)
+        if not isinstance(payload, dict):
+            return 0
     except Exception as exc:  # noqa: BLE001 - hook intentionally fails open
         try:
             print(f"workcell_hook: {exc}", file=sys.stderr)
         except Exception:
             pass
-    return 0
+        return 0
+
+    try:
+        handle(payload)
+    except Exception as exc:  # noqa: BLE001 - telemetry must never block Claude Code
+        try:
+            print(f"workcell_hook: {exc}", file=sys.stderr)
+        except Exception:
+            pass
+
+    try:
+        return enforce_isolation(payload, root_dir())
+    except Exception:
+        # The enforcement check itself must fail open: it is a backstop, and a bug
+        # in it must not brick every team-executor run.
+        return 0
 
 
 if __name__ == "__main__":
