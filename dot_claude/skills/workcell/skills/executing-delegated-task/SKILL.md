@@ -6,6 +6,22 @@ user-invocable: false
 
 Execute exactly one Workcell RUN.
 
+Before anything else, verify your own worktree isolation. `isolation: worktree` in
+your frontmatter is not reliable on its own — it has silently failed to take effect in
+past runs (a subagent operating in the live checkout with no worktree and no error;
+see anthropics/claude-code#33045, #39886, #83311). Run:
+
+```
+git rev-parse --git-dir
+git rev-parse --git-common-dir
+```
+
+If they resolve to the same path, you are in the main checkout, not an isolated
+worktree. Stop immediately: `status: blocked`, `attention: worktree isolation did not
+activate`. Do not proceed, and do not retry — a hook also enforces this and will deny
+your subsequent tool calls, but do not rely on hitting that; check first. Only continue
+past this point once the two paths differ.
+
 The parent prompt must provide absolute `WORKCELL_TASK` and `WORKCELL_RUN` paths. Invoke `using-workcell` before modifying Workcell records, then read both files. Treat the current TASK as authoritative over older runs or revisions.
 
 Recover repository context yourself when it is cheaply discoverable from the repository. Do not ask the parent to summarize ordinary repository structure for you.
