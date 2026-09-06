@@ -106,7 +106,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Skill",
+        "matcher": "Skill|Bash|PowerShell|Monitor|Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
