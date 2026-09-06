@@ -11,10 +11,12 @@
 # Detached HEAD has no branch to guard.
 branch=$(git symbolic-ref --short -q HEAD) || exit 0
 
-case "$branch" in
-  main|master) ;;
-  *) exit 0 ;;
-esac
+default_branch=$(git symbolic-ref --short -q refs/remotes/origin/HEAD)
+default_branch=${default_branch#origin/}
+default_branch=${default_branch:-$(git config init.defaultbranch)}
+default_branch=${default_branch:-$(case "$branch" in master) echo master ;; *) echo main ;; esac)}
+
+[ "$branch" = "$default_branch" ] || exit 0
 
 count=$(git diff --cached --name-only | wc -l | tr -d ' ')
 
