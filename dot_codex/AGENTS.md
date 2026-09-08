@@ -16,6 +16,7 @@ Imported and adapted from `~/.claude/CLAUDE.md` on 2026-06-26.
 - OS: Windows 11.
 - Prefer commands that work in the active shell. In Codex CLI sessions this is often PowerShell; in Claude Code it may be bash.
 - PowerShell profile location can be resolved with `echo $PROFILE`.
+- NEVER use Notion via Codex apps, but use MCP one.
 
 ## Git Conventions
 
