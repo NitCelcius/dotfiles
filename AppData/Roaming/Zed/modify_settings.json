@@ -1,7 +1,4 @@
 {{- /* chezmoi:modify-template */ -}}
-{{- /* Partial management: Zed's own UI writes ssh_connections locally  */ -}}
-{{- /* (per-machine remote-dev setups), so that key is carried over     */ -}}
-{{- /* from the live file instead of being owned/committed here.        */ -}}
 {{- $live := fromJsonc (.chezmoi.stdin | default "{}") -}}
 {{- $sshBlock := "" -}}
 {{- if hasKey $live "ssh_connections" -}}
