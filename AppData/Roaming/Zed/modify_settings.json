@@ -1,3 +1,20 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Partial management: Zed's own UI writes ssh_connections locally  */ -}}
+{{- /* (per-machine remote-dev setups), so that key is carried over     */ -}}
+{{- /* from the live file instead of being owned/committed here.        */ -}}
+{{- $live := fromJsonc (.chezmoi.stdin | default "{}") -}}
+{{- $sshBlock := "" -}}
+{{- if hasKey $live "ssh_connections" -}}
+{{-   $raw := toPrettyJson (get $live "ssh_connections") | trimSuffix "\n" -}}
+{{-   $lines := splitList "\n" $raw -}}
+{{-   $joined := "" -}}
+{{-   range $i, $l := $lines -}}
+{{-     if eq $i 0 -}}{{- $joined = $l -}}{{- else -}}{{- $joined = printf "%s\n  %s" $joined $l -}}{{- end -}}
+{{-   end -}}
+{{-   $sshBlock = printf "  \"ssh_connections\": %s,\n" $joined -}}
+{{- end -}}
+{{- $opening := "{\n" -}}
+{{- if $sshBlock -}}{{- $opening = printf "%s%s" $opening $sshBlock -}}{{- end -}}
 // Zed settings
 //
 // For information on how to configure Zed, see the Zed
@@ -6,8 +23,7 @@
 // To see all of Zed's default settings without changing your
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
-{
-  "diff_view_style": "split",
+{{ $opening }}  "diff_view_style": "split",
   "edit_predictions": {
     "provider": "zed",
   },
