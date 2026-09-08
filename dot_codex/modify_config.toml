@@ -1,8 +1,22 @@
-model = "gpt-5.6-sol"
-model_reasoning_effort = "medium"
-personality = "pragmatic"
-plan_mode_reasoning_effort = "xhigh"
-
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Partial management: Codex's own app writes model choice, its     */ -}}
+{{- /* MCP node_repl bridge, marketplace/plugin caches, per-project     */ -}}
+{{- /* trust decisions, and desktop UI state directly into this file.   */ -}}
+{{- /* Those are carried over from the live file instead of being       */ -}}
+{{- /* owned/committed here; everything else is owned below.            */ -}}
+{{- $live := fromToml (.chezmoi.stdin | default "") -}}
+{{- $scalars := pick $live "model" "model_reasoning_effort" "notify" "approvals_reviewer" -}}
+{{- $tables := dict -}}
+{{- if hasKey $live "mcp_servers" -}}
+{{-   $mcp := get $live "mcp_servers" -}}
+{{-   if hasKey $mcp "node_repl" -}}{{- $tables = set $tables "mcp_servers" (dict "node_repl" (get $mcp "node_repl")) -}}{{- end -}}
+{{- end -}}
+{{- range $k := list "marketplaces" "shell_environment_policy" "desktop" "projects" -}}
+{{-   if hasKey $live $k -}}{{- $tables = set $tables $k (get $live $k) -}}{{- end -}}
+{{- end -}}
+{{- if $scalars -}}
+{{ toToml $scalars }}
+{{ end -}}
 project_doc_fallback_filenames = ["CLAUDE.md"]
 project_doc_max_bytes = 65536
 
@@ -58,3 +72,7 @@ enabled = true
 
 [plugins."visualize@openai-bundled"]
 enabled = true
+{{- if $tables }}
+
+{{ toToml $tables }}
+{{- end }}
