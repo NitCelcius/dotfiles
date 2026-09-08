@@ -130,6 +130,11 @@ Before reporting "there is no X", make the query prove it can return something: 
 against a term known to be present, or widen it one step and confirm the wider form
 hits. Then report the absence, and say which check earned it.
 
+## Consulting documentation
+
+Before you consult documentation of non-local tools or libraries, perform a web search to
+retrieve the correct URL of the documentation first, rather than inferring the URL directly.
+
 ## Claiming Done
 
 Before saying a UI or runtime change works, assert it against the running application —
