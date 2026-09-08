@@ -57,6 +57,14 @@ Never force-push without first showing `git log --oneline @{u}..` (what you'd ov
 and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
 current working tree — create a worktree instead ([[using-git-worktrees]]).
 
+### Rebasing
+Before `git rebase --onto <target>`, always `git fetch` first and rebase onto the
+fetched `origin/<target>` ref, not a possibly-stale local branch ref — unless the goal
+is specifically to preserve local history as-is (e.g. deliberately rebasing onto a
+known-stale local snapshot). Fetching is cheap; a stale local ref can silently diverge
+from `origin/<target>` when someone else rebased or force-pushed it, producing a
+result that looks correct locally but conflicts against the real upstream.
+
 ### Merge strategy
 Rebase & fast-forward merge. Not squash merge.
 GitHub does not sign commits merged this way — the branch commits land on `main` as-is,
