@@ -120,6 +120,46 @@ def main() -> int:
     r = fire(repo, data_root, stop_hook_active=True)
     check("stop_hook_active -> allows stop", r.returncode == 0, f"rc={r.returncode}")
 
+    # --- {changed} targeting -------------------------------------------------
+    args_log = repo / "args.log"
+    record = (
+        "python -c \"import sys,io;"
+        f"io.open(r'{args_log}','a',encoding='utf-8')"
+        ".write(' '.join(sys.argv[1:])+chr(10))\" {changed:*.py}"
+    )
+    (repo / "CLAUDE.md").write_text(BLOCK.format(cmd=record), encoding="utf-8")
+    (repo / "alpha.py").write_text("a = 1\n", encoding="utf-8")
+    (repo / "notes.md").write_text("# notes\n", encoding="utf-8")
+    r = fire(repo, data_root)
+    recorded = args_log.read_text(encoding="utf-8") if args_log.exists() else ""
+    check("targeted quick ran", r.returncode == 0 and bool(recorded), f"rc={r.returncode} {r.stderr[:200]}")
+    check(
+        "targeting passed the changed .py file",
+        "alpha.py" in recorded,
+        f"recorded={recorded!r}",
+    )
+    check(
+        "targeting excluded the changed .md file",
+        "notes.md" not in recorded,
+        f"recorded={recorded!r}",
+    )
+
+    # With the .py work committed, only a non-matching file is dirty, so the
+    # command must not run at all. Committing first is the point: {changed} means
+    # "differs from HEAD", not "edited since the last run", so an uncommitted
+    # alpha.py would still legitimately match.
+    git("add", "-A")
+    git("commit", "-qm", "checkpoint")
+    before = args_log.read_text(encoding="utf-8")
+    (repo / "notes.md").write_text("# notes, revised\n", encoding="utf-8")
+    r = fire(repo, data_root)
+    check("only non-matching file dirty -> allows stop", r.returncode == 0, f"rc={r.returncode}")
+    check(
+        "only non-matching file dirty -> command not run",
+        args_log.read_text(encoding="utf-8") == before,
+        f"before={before!r} after={args_log.read_text(encoding='utf-8')!r}",
+    )
+
     bare = tmp / "notrepo"
     bare.mkdir()
     (bare / "CLAUDE.md").write_text(BLOCK.format(cmd="exit 1"), encoding="utf-8")
