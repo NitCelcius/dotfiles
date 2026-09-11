@@ -211,9 +211,8 @@ When starting a review and no target (worktree, branch, or PR) is explicitly spe
   do not build on them.
 - Name the check before dispatching, not after: which artifact will show whether this
   worked, and what failure would look like in it. A check chosen after reading the
-  report tends to be one the report already passes.
-- On return, run that check against the artifact — filesystem, test output, the
-  running app — not against the agent's summary. Proportion the check to the claim;
-  one command is often enough. If a load-bearing claim has no checkable artifact,
-  say so plainly rather than passing it through.
+  report tends to be one the report already passes. On return, run it against that
+  artifact, not against the agent's summary; if a load-bearing claim has no checkable
+  artifact, say so rather than passing it through.
+- For dispatching an agent purely to *check* a result, see `verify-before-claiming`.
 - Commits are always made by main.
