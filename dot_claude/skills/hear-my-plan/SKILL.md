@@ -1,6 +1,6 @@
 ---
 name: hear-my-plan
-description: Use before any new project, feature, or architecture change when the user dumps a long, rough, or incomplete idea (roughly 120+ words). Hear the idea out, pull it back to purpose and goals, and produce a clear execution plan. Do NOT implement until the user approves. Skip small, clear, well-scoped tasks. Always available explicitly via /hear-my-plan.
+description: Use before any new project, feature, or architecture change when the user dumps a long, rough, or incomplete idea (roughly 120+ words), or says "let's discuss". Hear the idea out, pull it back to purpose and goals, and produce a clear execution plan. Do NOT implement until the user approves. Skip small, clear, well-scoped tasks. Always available explicitly via /hear-my-plan. Distinct from `brainstorming`, which is for scoped feature/design work where the design itself (not the framing) needs figuring out — this skill is for an unstructured dump that needs reorganizing back to purpose before any design starts.
 ---
 
 # Hear My Plan
@@ -8,9 +8,10 @@ description: Use before any new project, feature, or architecture change when th
 The user tends to throw long, unstructured, incomplete ideas. The default failure mode is to treat that dump as an implementation order and build something misaligned. Don't. First hear it out, reorganize it from the root, and agree on a plan. Only build after the user explicitly approves.
 
 ## When this fires
-- Auto: a new project / feature / architecture change described in a long, rough message (roughly 120+ words).
+- Auto: a new project / feature / architecture change described in a long, rough message (roughly 120+ words), or the phrase "let's discuss".
 - Explicit: `/hear-my-plan` (any length).
 - Skip: small, clear, well-scoped tasks, or plain fact questions. If you're clearly in this zone, exit the skill and proceed normally. (The ~120-word threshold exists so small features don't trip this.)
+- Skip when the idea is already scoped to a single feature/design question in an existing codebase and doesn't need reorganizing — that's `brainstorming`.
 
 <HARD-GATE>
 Do NOT write code, scaffold, run implementation tools, or invoke any implementation skill until you have presented a plan AND the user has approved it AND told you to implement. Presenting the plan is not permission to build.
