@@ -60,7 +60,9 @@ digraph skill_flow {
 
 When multiple skills could apply:
 
-1. **Process skills first** (brainstorming, writing-plans) — determine HOW to approach the task
+1. **Process/gating skills first** (hear-my-plan, brainstorming, readonly, writing-plans,
+   measure-first, verify-before-claiming, commit-scope-audit, archaeology-fanout) —
+   determine HOW to approach the task, or gate whether to act at all
 2. **Implementation skills second** — guide execution
 
 ## Skill Types
