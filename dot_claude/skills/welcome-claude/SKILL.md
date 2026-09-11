@@ -46,6 +46,7 @@ Also check `pyproject.toml` or `requirements.txt` for framework dependencies:
 - `gradio` → apply Gradio block
 - `pytest` → apply pytest block
 - `torch` / `tensorflow` / `keras` → apply ML training block
+- `pandas` / `matplotlib` **and** a directory of input data the code reads (`data/`, `input/`) → apply Analysis project block
 - `git lfs` entries in `.gitattributes` → apply LFS block
 - `ProjectSettings/ProjectVersion.txt` present → run Step 4C (Unity-MCP skill install), then apply Unity block
 
@@ -132,7 +133,46 @@ every path to a commit — the user's, Claude's, and `/draft-pr`'s — not just 
 
 ## Step 5 — Append convention blocks
 
-Add only the blocks that match the detected stack. Do not add blocks for absent languages or frameworks.
+The Verification block is required in every project and goes first. Every block after it is
+conditional: add only the ones matching the detected stack, and none for absent languages or
+frameworks.
+
+---
+
+### Verification (required, every project)
+
+This is where the global `## Verification` rule sends Claude when it decides whether work is
+done, and where a `Stop` hook looks for the command it runs at a task close-out. Both read the
+shape rather than the prose, so keep it exactly:
+
+- the heading is exactly `## Verification`
+- `quick` and `full` are the first two bullets, in that order
+- each command sits in one backtick span, and is the only backtick span on its line
+- the third bullet is required even when there is nothing to list, so that a check nobody runs
+  is a recorded decision instead of an omission
+
+```markdown
+## Verification
+
+- **quick** (task close-out, aim for under 30s): `<command>`
+- **full** (before a commit or PR): `<command>`
+- **Out of scope**: <what a passing run still does not cover, and why>
+```
+
+Fill it from what Step 2's `init` reported and Step 4 detected:
+
+- **quick** — the fastest command that can still fail on a real defect. Lint plus unit tests
+  where both exist (`uv run ruff check . && uv run pytest -q`, `npm run lint`); unit tests alone
+  otherwise. Keep builds, servers, and anything that writes artifacts out of it: this runs often.
+- **full** — `quick` plus the build or a pipeline smoke run (`npm run lint && npm run build`).
+  Where nothing more exists, repeat the `quick` command rather than inventing a step.
+- **Out of scope** — name what a passing run still does not cover: visual output, figure
+  generation, long training runs, anything needing hardware or a live service.
+
+If the project has no test or lint command at all, write `- **quick**: none (not yet set up)`
+rather than substituting something weaker that would read as a pass. The global rule then makes
+Claude ask what counts as success instead of assuming a syntax check was enough. Say which
+projects ended up in that state in the Step 6 summary.
 
 ---
 
@@ -141,8 +181,11 @@ Add only the blocks that match the detected stack. Do not add blocks for absent 
 ```markdown
 ## Python Conventions
 
-- After logic changes: `uv run pytest` before committing
+- Keep hand-checkable computation in pure helpers: typed values in, typed values out, no I/O, no global state, and no framework object (DataFrame, request, model) crossing the boundary. Those are the functions a test can call with hand-written inputs, and the ones an independent verifier can re-derive without rerunning the pipeline.
 ```
+
+Do not add "run pytest before committing" here — the Verification block above already owns when
+tests run, and a second instruction for the same duty is the one that goes stale.
 
 If the `py_compile` hook from Step 4A was **not** successfully added (e.g. user declined, or `update-config` unavailable), also add this line to the block above:
 
@@ -182,6 +225,18 @@ If the `py_compile` hook from Step 4A was **not** successfully added (e.g. user 
 - Before changing data-handling logic (channels, labels, aggregation): read the actual source and print shapes/dtypes — state the assumption and wait for confirmation before editing
 - Before running any experiment or submission script: diff against the last committed baseline and confirm only the intended parameter differs
 - Never rename or restructure a training script mid-experiment; create a new numbered config instead
+```
+
+---
+
+### Analysis project
+
+Add this **only** when the project computes results from a dataset it reads. Skip it for a library or an application that merely imports pandas.
+
+```markdown
+## Analysis Conventions
+
+- `docs/methods.md` holds definitions, formulas, and citations. `docs/findings.md` holds measured values, and names the input file each was computed from at the top of the file. A number with no method entry and no named input is not a finding yet — it does not go in either file until it has both.
 ```
 
 ---
