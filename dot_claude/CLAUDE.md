@@ -1,8 +1,3 @@
-## Skill: hear-my-plan
-
-Trigger `hear-my-plan` on the phrase "let's discuss" as well as on a long idea dump.
-Its gate is binding: no code, no edits, until the skill's confirmation step clears.
-
 ## Tooling
 
 - Run Python via `uv run python`, not `python3` directly
@@ -16,6 +11,15 @@ Its gate is binding: no code, no edits, until the skill's confirmation step clea
   filesystem operations and for parsing external command output — bash mangles
   Windows paths and misreads Shift-JIS.
 - PowerShell profile location: resolve with `echo $PROFILE`
+- Git Bash has no working heredocs — use the Write tool for multi-line file content,
+  not `<<EOF`. Don't run PowerShell syntax (`$env:X`, `Get-ChildItem`) through bash —
+  invoke it explicitly: `powershell -NoProfile -Command "..."`.
+- Never use `sed`/`perl` in-place editing for path or escape-sequence rewriting — it
+  has mangled bytes before. Use Python with explicit binary-safe reads/writes, and
+  verify with `git diff` before committing. Quote paths defensively; filenames contain
+  spaces.
+- The Bitwarden CLI (`bw`) can hang indefinitely or return an empty password. Add a
+  timeout and check for empty output before using a retrieved secret.
 
 ## Git Conventions
 
@@ -43,6 +47,13 @@ Before a git command that writes (`add`, `commit`, `checkout`, `reset`, `rebase`
 confirm the target with `git rev-parse --show-toplevel`. The working directory is often
 not the repo you mean — the chezmoi source, worktrees, and Unity projects all sit
 adjacent to or nested near each other.
+
+### Fetch before diverging
+Always `git fetch origin` immediately before `rebase`, `merge`, or reasoning about
+whether a branch has diverged — never rebase onto or reason about a stale local ref.
+Never force-push without first showing `git log --oneline @{u}..` (what you'd overwrite)
+and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
+current working tree — create a worktree instead ([[using-git-worktrees]]).
 
 ### Merge strategy
 Rebase & fast-forward merge. Not squash merge.
@@ -72,6 +83,10 @@ When reporting, lead with the current conclusion, the main evidence for it, and
 the weakest assumption that would overturn it. Do not blur uncertainty; say
 specifically what is still unverified.
 
+When asking me for a decision, state the decision needed in one sentence before the
+supporting facts — don't blend the two into one paragraph I have to untangle. Define
+any abbreviation or internal shorthand on first use in a session.
+
 ## Explaining Code
 
 When asked "how does X work" or for an explanation of behavior, answer in tiers and
@@ -96,6 +111,9 @@ pause for go-ahead after the first one, unless full depth was already asked for:
 - When something outside that scope looks like it should change, say so at the moment
   you notice it — not batched into the final report. Describe it, then continue the
   original work. Do not make the change unprompted.
+- Never commit secrets or credentials, SSH config included.
+- For a document I own that you didn't create (a Notion page, an existing doc) — append
+  or edit only the part asked about. Don't restructure or rewrite the rest unprompted.
 
 ## Code Style
 
