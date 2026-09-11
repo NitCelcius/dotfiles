@@ -164,9 +164,10 @@ retrieve the correct URL of the documentation first, rather than inferring the U
 
 Decide "done" by running the commands in the project CLAUDE.md's `## Verification`
 block: `quick` at a task close-out, `full` before a commit or PR. If a project has no
-such block, do not claim done — ask what has to run for the work to count as
-successful. When you learn a verification command that block does not list, add it
-there.
+such block, ask what has to run for the work to count as successful and write the
+answer into one, in the shape `welcome-claude` defines — `/init` on its own does not
+produce it. Do not claim done before it exists. When you learn a command that block
+does not list, add it there.
 
 ## Claiming Done
 
