@@ -8,6 +8,12 @@ description: Use when asked to review changes on the current branch or uncommitt
 Review branch or working tree changes against the base, then output a numbered
 report.
 
+Use this for a plain "review my changes" ask — it's lighter than the built-in
+`/code-review` and adds the Bitwarden-signing check and single continuous numbering
+below. Reach for `/code-review` instead when you want a graded effort level
+(low/medium/high/max/ultra), inline PR comments (`--comment`), or auto-applied fixes
+(`--fix`).
+
 ## Usage
 
 `/review-my-diff [base]` — defaults to `main` when base is omitted
