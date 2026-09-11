@@ -1,5 +1,7 @@
 model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
+personality = "pragmatic"
+plan_mode_reasoning_effort = "xhigh"
 
 project_doc_fallback_filenames = ["CLAUDE.md"]
 project_doc_max_bytes = 65536
@@ -27,6 +29,11 @@ url = "https://mcp.notion.com/mcp"
 [features]
 rmcp_client = true
 js_repl = false
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
 
 [plugins."documents@openai-primary-runtime"]
 enabled = true
