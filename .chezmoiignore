@@ -11,4 +11,12 @@
 .claude/skills/unity-mcp-camera-graphics
 .claude/skills/unity-mcp-testing-editor
 .claude/skills/unity-mcp-packages-docs
+
+# Regression test for the Stop hook. Runs from the dotfiles checkout, where git
+# and a scratch directory are available; nothing needs it on a deployed machine.
+.claude/verify-on-stop/test_verify_on_stop.py
+
+# Running the hook or its test from the source tree leaves bytecode behind, and
+# chezmoi would otherwise deploy it.
+**/__pycache__
 obsidian
