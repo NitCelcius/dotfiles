@@ -104,7 +104,7 @@
   "agent_servers": {
     "claude-acp": {
       "default_config_options": {
-        "mode": "default"
+        "mode": "auto"
       },
       "type": "registry",
     },
