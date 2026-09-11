@@ -1,6 +1,6 @@
 ---
 name: verify-before-claiming
-description: Use before asserting that a behavior works, is implemented, or is broken, when the evidence so far comes only from reading code rather than running it. Tag each such claim as VERIFIED-RUNTIME or INFERRED and say what would upgrade it. Also applies when the user already reports the opposite of what the code suggests — trust their observation over the code reading.
+description: Use before asserting that a behavior works, is implemented, or is broken, when the evidence so far comes only from reading code rather than running it. Tag each such claim as VERIFIED-RUNTIME or INFERRED and say what would upgrade it. Also applies when the user already reports the opposite of what the code suggests — trust their observation over the code reading, and when deciding whether a result is worth a second agent to check.
 ---
 
 # Verify Before Claiming
@@ -41,6 +41,40 @@ step that would upgrade it to VERIFIED-RUNTIME.
    confirm it.
 5. Never let an agent's report of its own work stand as verification of the running
    system — check it against an artifact the agent didn't author.
+
+## When A Second Agent Is Worth It
+
+A verifier subagent costs a round trip and a second context. Spend it only when
+**all three** hold:
+
+1. **The mistake would survive the mechanical checks.** Typecheck, lint and unit
+   tests would pass with the error still in place.
+2. **A human reading the output would not catch it either.** Numbers, large
+   classifications, external state — results with no obviously wrong shape.
+3. **Fixing it later costs more than the verifier does.** Work downstream has
+   already been built on it, or the operation is not reversible.
+
+Two out of three is a no. So is "this feels important".
+
+| Work | Verifier? | How |
+|---|---|---|
+| Numeric analysis, benchmarks | Yes | Hand it the input fixture and the produced numbers. Ask it to derive the expected values itself |
+| Bulk classification of many items | Yes | A random sample of ~20, the rule text, nothing else |
+| Plan for a destructive operation | Yes | It reviews the plan artifact (the CSV, the file list), never the prose describing it |
+| Quality of a skill's judgment | No — that is a fixture test | A recorded case with an expected answer, re-run on change. Not a per-run agent |
+| Root cause investigation | No by default | `measure-first` already covers this. Only when the observation is expensive and one-shot |
+| Ordinary small edits, CRUD, trivial refactors | No | The mechanical checks catch these, which is condition 1 failing |
+
+### Give it the artifact, not your reasoning
+
+A verifier handed your summary, your diff rationale, or your transcript will
+retrace your reasoning and agree with it. That is not a second opinion; it is the
+same opinion at twice the price.
+
+Give it exactly three things: the rule the result has to satisfy, the input, and
+the output produced. Not how the output was arrived at, and not what you expect it
+to conclude. Say up front which artifact will settle the disagreement if it
+returns something different.
 
 ## Don't
 - Don't blend INFERRED and VERIFIED-RUNTIME claims in the same sentence without
