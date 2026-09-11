@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Use when the task is open-ended design work - creating features, building components, or deciding on approach. Skip if the edit target is already explicit (specific file + specific change stated in the request).
+description: Use when the task is open-ended design work - creating features, building components, or deciding on approach. Skip if the edit target is already explicit (specific file + specific change stated in the request). Skip also for a long (120+ word), unstructured idea dump that still needs pulling back to purpose - that's hear-my-plan.
 ---
 
 # Brainstorming Ideas Into Designs
@@ -11,6 +11,9 @@ Help turn ideas into fully formed designs and specs through natural collaborativ
 **Skip this skill entirely if:**
 - A specific file AND a specific change are both already stated in the request
 - The user is asking you to edit, rename, move, or refactor a named thing in a named location
+- The message is a long, rough, unstructured idea dump (roughly 120+ words) that still
+  needs pulling back to purpose and goals before any design work starts — use
+  `hear-my-plan` instead
 
 This skill is for open-ended work where the design itself needs to be figured out.
 </HARD-GATE>
