@@ -20,6 +20,8 @@
   spaces.
 - The Bitwarden CLI (`bw`) can hang indefinitely or return an empty password. Add a
   timeout and check for empty output before using a retrieved secret.
+- Write files as UTF-8. Through PowerShell pass `-Encoding utf8` explicitly — its
+  default varies by version and has produced mojibake in Japanese paths and content.
 
 ## Git Conventions
 
@@ -111,6 +113,9 @@ pause for go-ahead after the first one, unless full depth was already asked for:
 - When something outside that scope looks like it should change, say so at the moment
   you notice it — not batched into the final report. Describe it, then continue the
   original work. Do not make the change unprompted.
+- Split a destructive operation into three steps: produce a reviewable plan artifact
+  (a CSV, a file list), execute it, then produce a measured report of what actually
+  happened. Never fold the plan into the same step that executes it.
 - Never commit secrets or credentials, SSH config included.
 - For a document I own that you didn't create (a Notion page, an existing doc) — append
   or edit only the part asked about. Don't restructure or rewrite the rest unprompted.
@@ -132,6 +137,8 @@ pause for go-ahead after the first one, unless full depth was already asked for:
 
 Never launch or poll a long-running process (servers, training runs, watch tasks) via a blocking tool call — output capture stalls verification. Detach it, write logs to a file, and tail the file if you need to check progress. If it cannot be detached, build the code and give the user the exact command to run.
 
+For analysis, conversion, or batch processing, write intermediate results to files and have each downstream step read them back. Re-running and verifying then cost a diff of the intermediate artifact instead of a full re-run.
+
 ## Reading Files
 
 - Specify a range when calling Read unless the whole file is genuinely needed.
@@ -152,6 +159,14 @@ hits. Then report the absence, and say which check earned it.
 
 Before you consult documentation of non-local tools or libraries, perform a web search to
 retrieve the correct URL of the documentation first, rather than inferring the URL directly.
+
+## Verification
+
+Decide "done" by running the commands in the project CLAUDE.md's `## Verification`
+block: `quick` at a task close-out, `full` before a commit or PR. If a project has no
+such block, do not claim done — ask what has to run for the work to count as
+successful. When you learn a verification command that block does not list, add it
+there.
 
 ## Claiming Done
 
