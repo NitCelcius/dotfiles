@@ -16,6 +16,17 @@ It stays out of the way by design, exiting 0 without running anything when:
 The command is run through the platform shell, so write `quick` to work in both
 sh and cmd.exe. Chaining with `&&` is safe; shell-specific syntax is not.
 
+`quick` may target only what changed rather than the whole project, which is what
+keeps a per-turn check cheap:
+
+    - **quick**: `uv run ruff check {changed:*.py} && uv run pytest -q`
+
+`{changed}` becomes every changed file, `{changed:<glob>}` only those matching.
+Deleted files are dropped. If a placeholder selects nothing — a turn that touched
+only Markdown, say — the whole command is skipped, so choose the glob to cover
+everything that could break the check. A change set too wide for a command line is
+also skipped: that is a commit, and `full` is its gate.
+
 `--selftest` runs the parser fixtures and prints a pass/fail line per case. It
 takes no stdin and touches nothing on disk.
 """
@@ -29,7 +40,8 @@ import re
 import subprocess
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from fnmatch import fnmatch
+from pathlib import Path, PurePosixPath
 
 DATA_ROOT = Path(
     os.environ.get("CLAUDE_VERIFY_DATA_ROOT", Path.home() / ".claude" / "verify-on-stop")
@@ -43,11 +55,15 @@ LOG_KEEP_LINES = 200
 TIMEOUT_SECONDS = int(os.environ.get("CLAUDE_VERIFY_TIMEOUT", "180"))
 MAX_OUTPUT_LINES = 40
 MAX_FINGERPRINT_BYTES = 4 * 1024 * 1024
+# cmd.exe truncates past ~8191 characters, so a change set this wide is not a
+# task close-out any more; it is a commit, and `full` is the right gate for it.
+MAX_COMMAND_CHARS = 6000
 
 HEADING = re.compile(r"^##\s+Verification\s*$")
 NEXT_HEADING = re.compile(r"^##\s+\S")
 QUICK_BULLET = re.compile(r"^\s*[-*]\s+\*\*quick\*\*", re.IGNORECASE)
 BACKTICK_SPAN = re.compile(r"`([^`]+)`")
+CHANGED_TOKEN = re.compile(r"\{changed(?::([^}]*))?\}")
 
 # Exit codes the Stop hook contract reads.
 EXIT_ALLOW_STOP = 0
@@ -107,6 +123,69 @@ def git(args: list[str], cwd: Path) -> str | None:
     return done.stdout if done.returncode == 0 else None
 
 
+def changed_paths(status_z: str) -> list[str]:
+    """Every path `git status --porcelain=v1 -z` reports as changed.
+
+    Deletions are dropped: there is nothing left to lint. Rename and copy entries
+    carry a second NUL-separated field holding the original path, which has to be
+    consumed rather than read as an entry of its own.
+    """
+    fields = [f for f in status_z.split("\0") if f]
+    paths: list[str] = []
+    index = 0
+    while index < len(fields):
+        entry = fields[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        code, path = entry[:2], entry[3:]
+        if code[0] in "RC":
+            index += 1  # The original path, which is gone by definition.
+        if "D" in code:
+            continue
+        paths.append(path)
+    return sorted(set(paths))
+
+
+def shell_quote(path: str) -> str:
+    return f'"{path}"'
+
+
+def expand_changed(command: str, root: Path, status_z: str) -> tuple[str | None, str]:
+    """Substitute `{changed}` / `{changed:<glob>}` with the changed files.
+
+    Returns (command, reason). A None command means do not run: either nothing
+    relevant changed, or the change set is too wide to pass on a command line.
+    """
+    if not CHANGED_TOKEN.search(command):
+        return command, "no-placeholder"
+
+    candidates = [p for p in changed_paths(status_z) if (root / p).is_file()]
+    # A quoted path cannot survive a quote of its own in either shell.
+    candidates = [p for p in candidates if '"' not in p]
+
+    outcome = "targeted"
+
+    def substitute(match: re.Match[str]) -> str:
+        nonlocal outcome
+        pattern = (match.group(1) or "").strip()
+        selected = [
+            p for p in candidates
+            if not pattern or fnmatch(p, pattern) or fnmatch(PurePosixPath(p).name, pattern)
+        ]
+        if not selected:
+            outcome = "nothing-relevant-changed"
+            return ""
+        return " ".join(shell_quote(p) for p in selected)
+
+    expanded = CHANGED_TOKEN.sub(substitute, command)
+    if outcome != "targeted":
+        return None, outcome
+    if len(expanded) > MAX_COMMAND_CHARS:
+        return None, "change-set-too-wide-for-quick"
+    return expanded, outcome
+
+
 def untracked_paths(status_z: str) -> list[str]:
     """Untracked paths from `git status --porcelain=v1 -z` output.
 
@@ -118,7 +197,7 @@ def untracked_paths(status_z: str) -> list[str]:
     )
 
 
-def working_tree_fingerprint(root: Path) -> str | None:
+def working_tree_fingerprint(root: Path, status: str) -> str | None:
     """Hash HEAD, the uncommitted patch, and untracked file contents.
 
     `git diff HEAD` covers tracked files and `git status` names untracked ones,
@@ -127,9 +206,6 @@ def working_tree_fingerprint(root: Path) -> str | None:
     guard would skip verification for the whole life of a new file.
     """
     head = git(["rev-parse", "HEAD"], root) or ""
-    status = git(["status", "--porcelain=v1", "-uall", "-z"], root)
-    if status is None:
-        return None
     patch = git(["diff", "HEAD"], root) or ""
 
     digest = hashlib.sha256()
@@ -235,10 +311,15 @@ def run() -> int:
         log_decision("no-quick-command", cwd=cwd_text)
         return EXIT_ALLOW_STOP
 
+    status = git(["status", "--porcelain=v1", "-uall", "-z"], root)
+    if status is None:
+        log_decision("git-status-unavailable", cwd=cwd_text)
+        return EXIT_ALLOW_STOP
+
     key = os.path.normcase(str(root))
     state = load_state()
     entry = state.get(key, {})
-    fingerprint = working_tree_fingerprint(root)
+    fingerprint = working_tree_fingerprint(root, status)
 
     if fingerprint is not None:
         if fingerprint in entry.get("passed", []):
@@ -249,6 +330,11 @@ def run() -> int:
             # the session on a failure Claude has decided not to fix.
             log_decision("already-blocked-on-this-state", cwd=cwd_text, command=command)
             return EXIT_ALLOW_STOP
+
+    command, targeting = expand_changed(command, root, status)
+    if command is None:
+        log_decision(targeting, cwd=cwd_text)
+        return EXIT_ALLOW_STOP
 
     try:
         done = subprocess.run(
@@ -280,7 +366,8 @@ def run() -> int:
         # writes anything git can see (a log, a report, an un-ignored cache)
         # would otherwise leave a tree that never matches what was stored, and
         # the guard would re-run it on every single turn.
-        after = working_tree_fingerprint(root)
+        status_after = git(["status", "--porcelain=v1", "-uall", "-z"], root)
+        after = working_tree_fingerprint(root, status_after) if status_after is not None else None
         entry["passed"] = [f for f in (fingerprint, after) if f is not None]
         entry.pop("blocked", None)
         state[key] = entry
@@ -338,6 +425,19 @@ SELFTEST_CASES: list[tuple[str, str, str | None]] = [
 ]
 
 
+CHANGED_CASES: list[tuple[str, str, list[str]]] = [
+    ("modified, added and untracked all count", "M  a.py\0 M b.py\0?? c.py\0", ["a.py", "b.py", "c.py"]),
+    ("deletions are dropped", " D gone.py\0 M kept.py\0", ["kept.py"]),
+    (
+        "a rename yields the new path only, not the original",
+        "R  new.py\0old.py\0 M other.py\0",
+        ["new.py", "other.py"],
+    ),
+    ("Japanese and spaces come through -z intact", "?? 研究室/測色 raw.csv\0", ["研究室/測色 raw.csv"]),
+    ("duplicates collapse", "M  a.py\0 M a.py\0", ["a.py"]),
+    ("empty output", "", []),
+]
+
 UNTRACKED_CASES: list[tuple[str, str, list[str]]] = [
     ("nothing untracked", " M src/app.py\0M  README.md\0", []),
     ("untracked among modified", " M src/app.py\0?? notes.md\0", ["notes.md"]),
@@ -367,6 +467,14 @@ def selftest() -> int:
         total += 1
         failures += not ok
         print(f"{'PASS' if ok else 'FAIL'}  untracked_paths: {name}")
+        if not ok:
+            print(f"      expected {sorted(expected_paths)!r}, got {actual_paths!r}")
+    for name, text, expected_paths in CHANGED_CASES:
+        actual_paths = changed_paths(text)
+        ok = actual_paths == sorted(expected_paths)
+        total += 1
+        failures += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  changed_paths: {name}")
         if not ok:
             print(f"      expected {sorted(expected_paths)!r}, got {actual_paths!r}")
     print(f"\n{total - failures}/{total} passed")

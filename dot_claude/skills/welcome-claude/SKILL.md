@@ -162,8 +162,19 @@ shape rather than the prose, so keep it exactly:
 Fill it from what Step 2's `init` reported and Step 4 detected:
 
 - **quick** — the fastest command that can still fail on a real defect. Lint plus unit tests
-  where both exist (`uv run ruff check . && uv run pytest -q`, `npm run lint`); unit tests alone
-  otherwise. Keep builds, servers, and anything that writes artifacts out of it: this runs often.
+  where both exist, unit tests alone otherwise. Keep builds, servers, and anything that writes
+  artifacts out of it: this runs often. Lint the files that changed rather than the project —
+  `{changed:<glob>}` in the command expands to the changed files matching that glob, and the
+  Stop hook skips the whole command when nothing matches:
+
+  ```
+  uv run ruff check {changed:*.py} && uv run pytest -q
+  npx eslint {changed:*.ts} {changed:*.tsx}
+  ```
+
+  Pick the glob to cover everything that could break the check, since a turn touching only
+  unmatched files is not verified at all. Leave `{changed}` out where the tool is already fast
+  on the whole project, or where it has no per-file mode.
 - **full** — `quick` plus the build or a pipeline smoke run (`npm run lint && npm run build`).
   Where nothing more exists, repeat the `quick` command rather than inventing a step.
 - **Out of scope** — name what a passing run still does not cover: visual output, figure
