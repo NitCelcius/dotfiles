@@ -16,6 +16,12 @@ It stays out of the way by design, exiting 0 without running anything when:
 The command is run through the platform shell, so write `quick` to work in both
 sh and cmd.exe. Chaining with `&&` is safe; shell-specific syntax is not.
 
+It runs at the git root, even when the CLAUDE.md it came from sits in a
+subdirectory (the walk-up in `find_claude_md` finds the nearest one, but the
+command's cwd is always `root`). A monorepo subproject's own CLAUDE.md is
+picked up, but `quick` in it must still resolve relative to the repo root -
+this hook does not support a subproject-scoped `quick`.
+
 `quick` may target only what changed rather than the whole project, which is what
 keeps a per-turn check cheap:
 
@@ -245,6 +251,20 @@ def working_tree_fingerprint(root: Path, status: str) -> str | None:
     return digest.hexdigest()
 
 
+def shallow_fingerprint(status: str) -> str:
+    """Hash of the `git status` text alone - no diff or file content.
+
+    Fallback for the "already blocked on this state" dedup when
+    working_tree_fingerprint bails out past MAX_FINGERPRINT_BYTES. It is
+    coarser on purpose: a content-only edit to a file that was already
+    modified doesn't change which paths `git status` lists, so it hashes the
+    same and can under-fire - treating a genuinely different failure as the
+    one already reported. Only reached past the 4 MB fingerprint budget,
+    where the alternative (no dedup at all) is a repeated multi-minute block.
+    """
+    return hashlib.sha256(status.encode("utf-8", "replace")).hexdigest()
+
+
 def load_state() -> dict:
     try:
         return json.loads(STATE_FILE.read_text(encoding="utf-8"))
@@ -284,6 +304,35 @@ def tail(text: str, limit: int = MAX_OUTPUT_LINES) -> str:
     if len(lines) <= limit:
         return "\n".join(lines)
     return "\n".join(["... (earlier output trimmed)", *lines[-limit:]])
+
+
+def as_list(value: object) -> list:
+    """Tolerate the pre-list `blocked` schema (a bare string) in old state."""
+    if isinstance(value, str):
+        return [value]
+    return value if isinstance(value, list) else []
+
+
+def record_block(state: dict, key: str, entry: dict, fingerprint: str | None, shallow: str, root: Path) -> None:
+    """Persist that this failure was reported, so the guard can dedup it.
+
+    Snapshots the tree again after the run for the same reason the pass path
+    does: a command with a git-visible side effect (a log, a report) would
+    otherwise leave a tree that never matches what was stored here, and the
+    dedup below could never fire.
+    """
+    status_after = git(["status", "--porcelain=v1", "-uall", "-z"], root)
+    if fingerprint is not None:
+        after = working_tree_fingerprint(root, status_after) if status_after is not None else None
+        entry["blocked"] = [f for f in (fingerprint, after) if f is not None]
+        entry.pop("blocked_shallow", None)
+    else:
+        shallow_after = shallow_fingerprint(status_after) if status_after is not None else None
+        entry["blocked_shallow"] = [s for s in (shallow, shallow_after) if s is not None]
+        entry.pop("blocked", None)
+    entry.pop("passed", None)
+    state[key] = entry
+    save_state(state)
 
 
 def run() -> int:
@@ -330,16 +379,23 @@ def run() -> int:
     state = load_state()
     entry = state.get(key, {})
     fingerprint = working_tree_fingerprint(root, status)
+    shallow = shallow_fingerprint(status)
 
     if fingerprint is not None:
-        if fingerprint in entry.get("passed", []):
+        if fingerprint in as_list(entry.get("passed")):
             log_decision("unchanged-since-pass", cwd=cwd_text, command=command)
             return EXIT_ALLOW_STOP
-        if entry.get("blocked") == fingerprint:
+        if fingerprint in as_list(entry.get("blocked")):
             # Already reported this exact state once. Blocking again would trap
             # the session on a failure Claude has decided not to fix.
             log_decision("already-blocked-on-this-state", cwd=cwd_text, command=command)
             return EXIT_ALLOW_STOP
+    elif shallow in as_list(entry.get("blocked_shallow")):
+        # No full fingerprint (tree too big to hash within budget) - fall back
+        # to the coarser status-only one so an oversized repo can still dedup
+        # a block instead of re-running, and re-blocking, every single turn.
+        log_decision("already-blocked-on-this-state-shallow", cwd=cwd_text, command=command)
+        return EXIT_ALLOW_STOP
 
     command, targeting = expand_changed(command, root, status)
     if command is None:
@@ -365,6 +421,7 @@ def run() -> int:
             file=sys.stderr,
         )
         log_decision("timed-out", cwd=cwd_text, command=command, seconds=TIMEOUT_SECONDS)
+        record_block(state, key, entry, fingerprint, shallow, root)
         return EXIT_BLOCK_STOP
     except OSError as exc:
         print(f"quick verification could not start: {command} ({exc})", file=sys.stderr)
@@ -380,15 +437,13 @@ def run() -> int:
         after = working_tree_fingerprint(root, status_after) if status_after is not None else None
         entry["passed"] = [f for f in (fingerprint, after) if f is not None]
         entry.pop("blocked", None)
+        entry.pop("blocked_shallow", None)
         state[key] = entry
         save_state(state)
         log_decision("passed", cwd=cwd_text, command=command)
         return EXIT_ALLOW_STOP
 
-    entry["blocked"] = fingerprint
-    entry.pop("passed", None)
-    state[key] = entry
-    save_state(state)
+    record_block(state, key, entry, fingerprint, shallow, root)
 
     print(
         f"quick verification failed (exit {done.returncode}): {command}\n"
