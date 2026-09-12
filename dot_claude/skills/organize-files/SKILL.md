@@ -53,9 +53,12 @@ approves the plan.**
    item at the destination is left alone and reported as a collision,
    not clobbered), and it's resilient: a locked/in-use file is caught and
    reported in `failed.csv` instead of aborting the rest of the batch.
-   It's also safe to re-run — items already moved are silently skipped.
-   Report `collisions.csv` and `failed.csv` back to the user; don't treat
-   the run as fully done until those are empty or explicitly acknowledged.
+   It's also safe to re-run — items already moved are reported in
+   `notfound.csv`, not silently skipped.
+   Report `collisions.csv`, `failed.csv`, and `notfound.csv` back to the
+   user; don't treat the run as fully done until those are empty or
+   explicitly acknowledged. A non-empty `notfound.csv` on what should be a
+   first run is a red flag, not a pass — see Common mistakes below.
 
 ## Classification patterns
 
@@ -92,3 +95,4 @@ exist at the destination.
   assuming it matches the file on disk — normalization mismatches can
   make it silently never match. Prefer selecting the item via
   `Get-ChildItem`/its `.Name` property over retyping the literal string.
+  This is exactly what shows up as rows in `notfound.csv` on a first run.
