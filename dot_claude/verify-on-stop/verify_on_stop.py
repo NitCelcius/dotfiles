@@ -163,29 +163,37 @@ def expand_changed(command: str, root: Path, status_z: str) -> tuple[str | None,
         return command, "no-placeholder"
 
     candidates = [p for p in changed_paths(status_z) if (root / p).is_file()]
-    # A quoted path cannot survive a quote of its own in either shell.
-    candidates = [p for p in candidates if '"' not in p]
+    unsafe = [p for p in candidates if '"' in p or "%" in p]
+    for path in unsafe:
+        # A quoted path cannot survive a quote of its own in either shell,
+        # and cmd.exe expands a %VAR%-shaped substring even inside quotes,
+        # with no escape available from a plain (non-batch) command line.
+        # Left out rather than mis-verified - and said so, not silent.
+        log_decision("path-skipped-unsafe-for-shell", path=path)
+    candidates = [p for p in candidates if p not in unsafe]
 
-    outcome = "targeted"
+    matched_any = False
 
     def substitute(match: re.Match[str]) -> str:
-        nonlocal outcome
+        nonlocal matched_any
         pattern = (match.group(1) or "").strip()
         selected = [
             p for p in candidates
             if not pattern or fnmatch(p, pattern) or fnmatch(PurePosixPath(p).name, pattern)
         ]
-        if not selected:
-            outcome = "nothing-relevant-changed"
-            return ""
+        if selected:
+            matched_any = True
         return " ".join(shell_quote(p) for p in selected)
 
     expanded = CHANGED_TOKEN.sub(substitute, command)
-    if outcome != "targeted":
-        return None, outcome
+    if not matched_any:
+        # Every placeholder came back empty. A command with more than one
+        # {changed:...} token is still run if at least one matched - only a
+        # glob that isn't in the change set at all should skip the whole thing.
+        return None, "nothing-relevant-changed"
     if len(expanded) > MAX_COMMAND_CHARS:
         return None, "change-set-too-wide-for-quick"
-    return expanded, outcome
+    return expanded, "targeted"
 
 
 def untracked_paths(status_z: str) -> list[str]:
