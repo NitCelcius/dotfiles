@@ -139,7 +139,9 @@ def changed_paths(status_z: str) -> list[str]:
         if len(entry) < 4:
             continue
         code, path = entry[:2], entry[3:]
-        if code[0] in "RC":
+        if "R" in code or "C" in code:
+            # Porcelain v1 marks a rename/copy as "R "  or as " R" (work-tree
+            # only) - either column position, not just the index one.
             index += 1  # The original path, which is gone by definition.
         if "D" in code:
             continue
@@ -431,6 +433,11 @@ CHANGED_CASES: list[tuple[str, str, list[str]]] = [
     (
         "a rename yields the new path only, not the original",
         "R  new.py\0old.py\0 M other.py\0",
+        ["new.py", "other.py"],
+    ),
+    (
+        "a work-tree-only rename (index column blank) is still consumed",
+        " R new.py\0old.py\0 M other.py\0",
         ["new.py", "other.py"],
     ),
     ("Japanese and spaces come through -z intact", "?? 研究室/測色 raw.csv\0", ["研究室/測色 raw.csv"]),
