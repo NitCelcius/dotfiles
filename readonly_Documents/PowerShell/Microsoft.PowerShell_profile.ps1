@@ -12,8 +12,6 @@ Register-ArgumentCompleter -CommandName gitk -Native -ScriptBlock {
     Import-Module git-completion
     Complete-Gitk -CommandAst $CommandAst -CursorPosition $CursorPosition
 }
-<<<<<<< Updated upstream
-=======
 
 # I really wanted an alias for this, really
 function mklink {
@@ -66,4 +64,3 @@ MKLINK [[/D] | [/H] | [/J]] LinkName TargetPath
 
     New-Item -ItemType $itemType -Path $link -Target $target
 }
->>>>>>> Stashed changes
