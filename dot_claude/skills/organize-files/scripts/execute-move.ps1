@@ -49,8 +49,8 @@ $plan = Import-Csv $PlanCsv
 $moved = New-Object System.Collections.Generic.List[object]
 $collisions = New-Object System.Collections.Generic.List[object]
 $failed = New-Object System.Collections.Generic.List[object]
+$notFound = New-Object System.Collections.Generic.List[object]
 $leftAsIs = 0
-$alreadyGone = 0
 
 foreach ($row in $plan) {
     $name = $row.Name
@@ -61,10 +61,19 @@ foreach ($row in $plan) {
         continue
     }
 
+    if ([string]::IsNullOrWhiteSpace($name)) {
+        # An empty Name would resolve $srcPath to $SourceDir itself below -
+        # a malformed row must fail loudly, not move the whole source folder.
+        $failed.Add([PSCustomObject]@{ Name = $name; Destination = $destRel; Error = "empty Name in plan row" }) | Out-Null
+        continue
+    }
+
     $srcPath = Join-Path $SourceDir $name
     if (-not (Test-Path -LiteralPath $srcPath)) {
-        # Already moved in a prior run, or never existed - not an error.
-        $alreadyGone++
+        # Already moved in a prior run, or never existed - not an error, but
+        # worth its own report: a first run that matches nothing on disk (a
+        # Unicode NFC/NFD mismatch, say) must not read the same as a clean pass.
+        $notFound.Add([PSCustomObject]@{ Name = $name; Destination = $destRel }) | Out-Null
         continue
     }
 
@@ -95,6 +104,7 @@ foreach ($row in $plan) {
 $moved | Export-Csv -Path (Join-Path $ReportDir "moved.csv") -NoTypeInformation -Encoding UTF8
 $collisions | Export-Csv -Path (Join-Path $ReportDir "collisions.csv") -NoTypeInformation -Encoding UTF8
 $failed | Export-Csv -Path (Join-Path $ReportDir "failed.csv") -NoTypeInformation -Encoding UTF8
+$notFound | Export-Csv -Path (Join-Path $ReportDir "notfound.csv") -NoTypeInformation -Encoding UTF8
 
 Write-Output "MOVED: $($moved.Count)"
 Write-Output "COLLISIONS (already existed at destination, left untouched): $($collisions.Count)"
@@ -102,6 +112,6 @@ $collisions | ForEach-Object { Write-Output "  COLLISION: $($_.Name) -> $($_.Des
 Write-Output "FAILED (could not move - see reason): $($failed.Count)"
 $failed | ForEach-Object { Write-Output "  FAILED: $($_.Name) -> $($_.Destination) :: $($_.Error)" }
 Write-Output "LEFT AS-IS (not approved in this plan): $leftAsIs"
-Write-Output "ALREADY GONE (source missing, likely moved in a prior run): $alreadyGone"
+Write-Output "NOT FOUND (source missing - check notfound.csv; expected on a re-run, suspicious on a first run): $($notFound.Count)"
 Write-Output ""
-Write-Output "Reports written to: $ReportDir\{moved,collisions,failed}.csv"
+Write-Output "Reports written to: $ReportDir\{moved,collisions,failed,notfound}.csv"
