@@ -54,7 +54,7 @@
 	conflicts = diff HEAD --check
 	resign = commit -S --amend --no-edit
 	ra = rebase --abort
-	vs = log --show-signature -1
+	sig = log --show-signature -1
 	spush = stash push
 	spop = stash pop
 	spushm = stash push -m
