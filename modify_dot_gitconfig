@@ -52,6 +52,17 @@
 	last = log -1 HEAD
 	sl = stash list
 	conflicts = diff HEAD --check
+	resign = commit -S --amend --no-edit
+	ra = rebase --abort
+	vs = log --show-signature -1
+	spush = stash push
+	spop = stash pop
+	spushm = stash push -m
+	wt  = worktree list
+	wta = worktree add
+	wtr = worktree remove
+	f = fetch
+	fp = fetch --prune
 [include]
 	path = ~/.gitconfig.local
 {{ $safe -}}
