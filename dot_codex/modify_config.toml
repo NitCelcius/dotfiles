@@ -36,6 +36,7 @@ status_line_use_colors = false
 
 [mcp_servers.unityMCP]
 url = "http://127.0.0.1:8080/mcp"
+enabled = false
 
 [mcp_servers.notion]
 url = "https://mcp.notion.com/mcp"
@@ -72,6 +73,18 @@ enabled = true
 
 [plugins."visualize@openai-bundled"]
 enabled = true
+
+[plugins."codex-app-tools@openai-bundled"]
+enabled = false
+
+[plugins."computer-use@openai-bundled"]
+enabled = false
+
+[plugins."unified-computer-use@openai-bundled"]
+enabled = false
+
+[apps.connector_openai_codex_document_control]
+enabled = false
 {{- if $tables }}
 
 {{ toToml $tables }}
