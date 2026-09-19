@@ -19,6 +19,7 @@
 {{ end -}}
 project_doc_fallback_filenames = ["CLAUDE.md"]
 project_doc_max_bytes = 65536
+service_tier = "default"
 
 [windows]
 sandbox = "elevated"
@@ -27,8 +28,9 @@ sandbox = "elevated"
 "gpt-5.3-codex" = "gpt-5.4"
 
 [tui]
-status_line = ["project-name", "git-branch", "branch-changes", "context-used", "five-hour-limit", "task-progress"]
-status_line_use_colors = false
+status_line = ["project-name", "git-branch", "branch-changes", "context-used", "five-hour-limit", "task-progress", "weekly-limit"]
+status_line_use_colors = true
+theme = "catppuccin-latte"
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
