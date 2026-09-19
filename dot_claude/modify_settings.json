@@ -61,7 +61,11 @@
 {{- /* quick command itself rather than being killed without explanation.    */ -}}
 {{- $verify := printf "%s/.claude/verify-on-stop/verify_on_stop.py" .chezmoi.homeDir -}}
 {{- $stopHook := dict "type" "command" "command" (printf "python \"%s\"" $verify) "timeout" 240 -}}
-{{- $cfg = setValueAtPath "hooks.Stop" (list (dict "hooks" (list $stopHook))) $cfg -}}
+{{- $keptStop := list -}}
+{{- range default (list) (dig "hooks" "Stop" (list) $cfg) -}}
+{{-   if not (contains "verify_on_stop.py" (toJson .)) -}}{{- $keptStop = append $keptStop . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.Stop" (append $keptStop (dict "hooks" (list $stopHook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
