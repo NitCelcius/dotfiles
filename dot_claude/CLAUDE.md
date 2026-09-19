@@ -163,6 +163,11 @@ Before reporting "there is no X", make the query prove it can return something: 
 against a term known to be present, or widen it one step and confirm the wider form
 hits. Then report the absence, and say which check earned it.
 
+When a file that git does not track goes missing, ask me where it went. Report what
+is missing and what you observed (path, timestamps), then stop. Do not search the disk,
+temp folders or the Recycle Bin for it, and hold edits to those files until I answer. I
+usually know (a stash, a move). Recovering git-tracked content from history is fine.
+
 ## Consulting documentation
 
 Before you consult documentation of non-local tools or libraries, perform a web search to
