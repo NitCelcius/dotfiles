@@ -71,13 +71,13 @@
       "language_servers": ["ruff", "basedpyright"],
     },
     "TypeScript": {
-      "language_servers": ["tsgo", "!vtsls"],
+      "language_servers": ["typescript-ls", "!vtsls"],
     },
     "TSX": {
-      "language_servers": ["tsgo", "!vtsls"],
+      "language_servers": ["typescript-ls", "!vtsls"],
     },
     "JavaScript": {
-      "language_servers": ["tsgo", "!vtsls"],
+      "language_servers": ["typescript-ls", "!vtsls"],
     },
   },
   "agent": {
@@ -117,7 +117,7 @@
   "agent_servers": {
     "claude-acp": {
       "default_config_options": {
-        "mode": "auto"
+        "mode": "default"
       },
       "type": "registry",
     },
