@@ -240,7 +240,7 @@ Ready to implement login feature
 
 **Called by:**
 - **brainstorming** (Phase 4) - REQUIRED when design is approved and implementation follows
-- **subagent-driven-development** - REQUIRED before executing any tasks
+- **workcell-delegate** - REQUIRED before delegating any task to a `team-executor`
 - **executing-plans** - REQUIRED before executing any tasks
 - Any skill needing isolated workspace
 
