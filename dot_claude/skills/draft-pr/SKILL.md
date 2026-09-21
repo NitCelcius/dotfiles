@@ -18,7 +18,7 @@ as a blocker, and do not ask again if the user declines.
 ## Flow
 
 ```
-checks (parallel) → report or skip → write .git/pr-body.md → confirm title → gh pr create --draft → cleanup
+checks (parallel) → report or skip → write .git/pr-body.md → user reviews body + title → gh pr create --draft → cleanup
 ```
 
 ## Step 1: Parallel Checks
@@ -70,18 +70,21 @@ say so once and continue — this never blocks the PR.
 
 ## Step 3: Generate PR Draft
 
-Generate title and body from `git log main..HEAD` and `git diff main..HEAD`.
+Generate title and body from `git log main..HEAD` and `git diff main..HEAD`, following
+[pr-body.md](pr-body.md).
 
 Write body to `.git/pr-body.md`:
 ```bash
 # (not tracked by git)
 ```
 
-Propose title as a single line for user to confirm or edit.
+In a worktree `.git` is a file, so resolve the real location with
+`git rev-parse --absolute-git-dir`. Give the body's absolute path in chat and propose
+the title as a single line, then wait for the user to review both.
 
 ## Step 4: Create Draft PR
 
-After user confirms title:
+After user approves body and title:
 ```bash
 gh pr create --draft --title "<confirmed title>" --body-file .git/pr-body.md
 ```
