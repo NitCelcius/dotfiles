@@ -64,3 +64,9 @@ MKLINK [[/D] | [/H] | [/J]] LinkName TargetPath
 
     New-Item -ItemType $itemType -Path $link -Target $target
 }
+
+# Run claude with the 5-minute prompt cache TTL forced (for short sessions).
+function claude-short {
+    $env:FORCE_PROMPT_CACHING_5M = '1'
+    try { claude @args } finally { Remove-Item Env:FORCE_PROMPT_CACHING_5M -ErrorAction SilentlyContinue }
+}
