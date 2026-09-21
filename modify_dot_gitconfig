@@ -20,6 +20,9 @@
 	signingkey = {{ (bitwarden "item" "b70567a7-5d86-4db3-8741-b34200f283b4").sshKey.publicKey }}
 [core]
 	editor = code --wait
+[hook "sig-summary"]
+	event = post-commit
+	command = {{ .chezmoi.homeDir }}/.config/git/sig-summary.sh
 [commit]
 	gpgsign = true
 [rerere]

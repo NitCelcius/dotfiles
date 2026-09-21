@@ -8,3 +8,4 @@
 # Shell hooks must stay LF — a CRLF shebang (#!/bin/sh\r) fails to execute
 # on a Windows checkout.
 .githooks/** text eol=lf
+dot_config/git/executable_sig-summary.sh text eol=lf
