@@ -53,6 +53,18 @@ Imported and adapted from `~/.claude/CLAUDE.md` on 2026-06-26.
 - If the subject of a request is vague, ask before acting. Do not guess which component, file, repo, page, or element the user means.
 - Surface ambiguity early with one concise clarifying question.
 
+## Executing a Plan
+
+- Settle a mini plan before a run of tool calls: which calls, in what order, what each is for. Then execute without narrating.
+- Batch independent tool calls into one message; a call that does not depend on an earlier result must not wait for one.
+- Put the intent in the call itself — a `#` comment in the shell command — rather than in prose between calls.
+- Do not post progress updates mid-run. Speak up only when something breaks, when a finding changes the plan, or when a decision is needed, and say it immediately rather than saving it for the final report.
+
+## Reporting
+
+- After executing a plan, close out under these headings, in order: `# Done` (always), `# Task Progress` (only when the work spans more than this turn), `# Things to discuss` (assumptions made, or anything to confirm before the next task — only when there is something), `# Next` (omit when nothing follows).
+- Adding further headings is fine. A question, a short answer, or a single-step change stays prose.
+
 ## Before Editing
 
 - Before changing logic that depends on data shapes, expected values, or canonical sources, read the actual source first and state the assumption explicitly before editing when confirmation is needed.
@@ -61,6 +73,7 @@ Imported and adapted from `~/.claude/CLAUDE.md` on 2026-06-26.
 ## Running Code
 
 - Do not launch or poll long-running servers through tool calls unless the user explicitly wants that workflow. Prefer building or validating, then provide the exact command when a persistent server should be run by the user.
+- A scratchpad or one-off script gets a short header: one or two lines on what it does, plus args, inputs and outputs. No background or rationale.
 
 ## Code Review
 
