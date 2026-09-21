@@ -1,6 +1,6 @@
 ---
 name: seek-cleanup
-description: Use when asked to find dead code, unused imports, orphaned CSS classes, commented-out blocks, or other removable clutter in the codebase.
+description: Use when asked to find dead code, unused imports, orphaned CSS classes, commented-out blocks, or other removable clutter in the codebase. Finding removable clutter in the whole codebase; simplifying the code you just changed belongs to the built-in /simplify.
 ---
 
 # seek-cleanup
