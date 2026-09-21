@@ -23,6 +23,9 @@
 .claude/verify-on-stop/test_verify_on_stop.py
 .claude/session-start-diff/test_session_start_diff.py
 
+# Project instructions for working on this repo, not a file for the home directory.
+CLAUDE.md
+
 # Running the hook or its test from the source tree leaves bytecode behind, and
 # chezmoi would otherwise deploy it.
 **/__pycache__
