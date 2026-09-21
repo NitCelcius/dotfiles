@@ -4,6 +4,7 @@
 {{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
 {{- /*   hooks.Stop        — runs the project's quick verification, and      */ -}}
 {{- /*                       exits 2 to keep Claude from closing on a claim  */ -}}
+{{- /*   hooks.SessionStart — asks to offer a commit on a large pending diff  */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
@@ -71,6 +72,13 @@
 {{-   if not (contains "verify_on_stop.py" (toJson .)) -}}{{- $keptStop = append $keptStop . -}}{{- end -}}
 {{- end -}}
 {{- $cfg = setValueAtPath "hooks.Stop" (append $keptStop (dict "hooks" (list $stopHook))) $cfg -}}
+{{- $diffCheck := printf "%s/.claude/session-start-diff/session_start_diff.py" .chezmoi.homeDir -}}
+{{- $startHook := dict "type" "command" "command" (printf "python \"%s\"" $diffCheck) "timeout" 15 -}}
+{{- $keptStart := list -}}
+{{- range default (list) (dig "hooks" "SessionStart" (list) $cfg) -}}
+{{-   if not (contains "session_start_diff.py" (toJson .)) -}}{{- $keptStart = append $keptStart . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.SessionStart" (append $keptStart (dict "hooks" (list $startHook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
