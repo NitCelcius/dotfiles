@@ -1,0 +1,1 @@
+Presence of this file makes .githooks/pre-commit refuse commits on a branch that has diverged from origin/main.

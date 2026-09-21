@@ -1,7 +1,10 @@
 #!/bin/sh
-# Refuse commits made directly on a protected branch.
+# Refuse commits made directly on a protected branch, and - where the repo opts in
+# with a tracked .githooks/guard-diverged file - on a branch that has diverged
+# from origin/<default>.
 #
-# Escape hatch:  ALLOW_MAIN=1 git commit ...
+# Escape hatches:  ALLOW_MAIN=1 git commit ...
+#                  ALLOW_DIVERGED=1 git commit ...
 # Prefer that over --no-verify, which disables *every* hook in this repo
 # (formatter gates, signing checks, anything added later) rather than just
 # this one check.
@@ -16,7 +19,34 @@ default_branch=${default_branch#origin/}
 default_branch=${default_branch:-$(git config init.defaultbranch)}
 default_branch=${default_branch:-$(case "$branch" in master) echo master ;; *) echo main ;; esac)}
 
-[ "$branch" = "$default_branch" ] || exit 0
+if [ "$branch" != "$default_branch" ]; then
+  # Opt-in per repo: a tracked .githooks/guard-diverged file turns this on.
+  # A branch both ahead of and behind origin/<default> is an old branch that
+  # should not collect unrelated commits; branch from origin/<default> instead.
+  toplevel=$(git rev-parse --show-toplevel)
+  [ -f "$toplevel/.githooks/guard-diverged" ] || exit 0
+  [ -n "$ALLOW_DIVERGED" ] && exit 0
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 8 git fetch -q origin 2>/dev/null
+  else
+    git fetch -q origin 2>/dev/null
+  fi
+  counts=$(git rev-list --left-right --count "origin/$default_branch...HEAD" 2>/dev/null) || exit 0
+  behind=${counts%%[!0-9]*}
+  ahead=${counts##*[!0-9]}
+  [ "$behind" -gt 0 ] && [ "$ahead" -gt 0 ] || exit 0
+
+  {
+    printf '\n  !! refusing to commit on %s: it has diverged from origin/%s (ahead %s, behind %s)\n\n' \
+      "$branch" "$default_branch" "$ahead" "$behind"
+    printf '  Branch from origin/%s instead (uncommitted changes carry over):\n' "$default_branch"
+    printf '      git switch -c feat/<name> origin/%s\n\n' "$default_branch"
+    printf '  Or, if this commit really does belong on %s:\n' "$branch"
+    printf '      ALLOW_DIVERGED=1 git commit ...\n\n'
+  } >&2
+  exit 1
+fi
 
 count=$(git diff --cached --name-only | wc -l | tr -d ' ')
 
