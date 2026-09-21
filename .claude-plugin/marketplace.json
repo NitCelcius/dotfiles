@@ -1,0 +1,15 @@
+{
+  "name": "nitcelcius",
+  "description": "Claude Code plugins published from NitCelcius's dotfiles.",
+  "owner": {
+    "name": "NitCelcius",
+    "url": "https://github.com/NitCelcius"
+  },
+  "plugins": [
+    {
+      "name": "workcell",
+      "source": "./dot_claude/skills/workcell",
+      "description": "Delegate bounded, independently verifiable tasks to isolated executor agents, and escalate high-impact uncertainty to a read-only advisor."
+    }
+  ]
+}
