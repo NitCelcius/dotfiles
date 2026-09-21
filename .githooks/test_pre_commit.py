@@ -88,6 +88,17 @@ class PreCommitTest(unittest.TestCase):
         self.enable_diverged_guard()
         self.assertEqual(self.run_hook(), 1)
 
+    def test_diverged_message_hints_fetch(self) -> None:
+        self.diverge()
+        self.enable_diverged_guard()
+        result = subprocess.run(
+            ["sh", str(self.repo / ".githooks" / "pre-commit")],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("You may want to fetch main first", result.stderr)
+
     def test_diverged_ignored_without_opt_in(self) -> None:
         self.diverge()
         self.assertEqual(self.run_hook(), 0)

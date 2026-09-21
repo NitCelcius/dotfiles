@@ -27,11 +27,7 @@ if [ "$branch" != "$default_branch" ]; then
   [ -f "$toplevel/.githooks/guard-diverged" ] || exit 0
   [ -n "$ALLOW_DIVERGED" ] && exit 0
 
-  if command -v timeout >/dev/null 2>&1; then
-    timeout 8 git fetch -q origin 2>/dev/null
-  else
-    git fetch -q origin 2>/dev/null
-  fi
+  # Compares against the last-fetched origin/<default>; no network in the hook.
   counts=$(git rev-list --left-right --count "origin/$default_branch...HEAD" 2>/dev/null) || exit 0
   behind=${counts%%[!0-9]*}
   ahead=${counts##*[!0-9]}
@@ -41,7 +37,9 @@ if [ "$branch" != "$default_branch" ]; then
     printf '\n  !! refusing to commit on %s: it has diverged from origin/%s (ahead %s, behind %s)\n\n' \
       "$branch" "$default_branch" "$ahead" "$behind"
     printf '  Branch from origin/%s instead (uncommitted changes carry over):\n' "$default_branch"
-    printf '      git switch -c feat/<name> origin/%s\n\n' "$default_branch"
+    printf '      git switch -c feat/<name> origin/%s\n' "$default_branch"
+    printf '  You may want to fetch %s first, since this compares against the last fetch:\n' "$default_branch"
+    printf '      git fetch origin %s\n\n' "$default_branch"
     printf '  Or, if this commit really does belong on %s:\n' "$branch"
     printf '      ALLOW_DIVERGED=1 git commit ...\n\n'
   } >&2
