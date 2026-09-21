@@ -4,7 +4,7 @@
 {{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
 {{- /*   hooks.Stop        — runs the project's quick verification, and      */ -}}
 {{- /*                       exits 2 to keep Claude from closing on a claim  */ -}}
-{{- /*   hooks.SessionStart — flags a pending diff, commit hint at 300+     */ -}}
+{{- /*   hooks.SessionStart — flags a pending diff, commit ask at 300+      */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
