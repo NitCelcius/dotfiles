@@ -78,6 +78,11 @@ When the task is done, state plainly that the commits were made without signing.
 Because the merge is rebase & ff, unsigned commits stay unsigned on `main`. Signing is
 therefore reconciled once, at PR time, not during the work — see the `draft-pr` skill.
 
+### Pull requests
+Open every PR as a draft, and get user review of the body before `gh pr create` — with
+or without `/draft-pr`. Body rules live in `~/.claude/skills/draft-pr/pr-body.md`; when
+I correct a body, update that file.
+
 ## Communication & Clarifying Intent
 
   If the subject of my request is vague — the *what* (which component, file,
