@@ -124,10 +124,19 @@ every path to a commit — the user's, Claude's, and `/draft-pr`'s — not just 
      recorded on its own.
    - Add `.githooks/** text eol=lf` to `.gitattributes` if the repo normalizes with `* text=auto`;
      otherwise a Windows checkout rewrites the shebang to `#!/bin/sh\r` and the hook fails silently.
-5. Verify before claiming it works: with the default branch checked out, stage something and run
+5. Ask once, separately, only if the hook was installed in step 3: *"Also refuse commits on a branch
+   that has diverged from `origin/<default-branch>` (ahead and behind)? It has an `ALLOW_DIVERGED=1`
+   escape hatch."* The hook ships this check off; a tracked `.githooks/guard-diverged` file turns it
+   on. If accepted, create that file with one line saying its presence enables the check, and
+   `git add` it. If declined, do nothing and don't raise it again.
+   - The check compares against the last-fetched `origin/<default-branch>` and makes no network
+     call. Say so: a stale ref can miss a divergence, and the refusal message hints at
+     `git fetch origin <default-branch>`.
+6. Verify before claiming it works: with the default branch checked out, stage something and run
    `git commit`. Confirm it exits non-zero and the commit does not land. A hook that was never
    enabled produces exactly the same output as a repo with no hook at all.
-6. Note in your summary whether the guard was installed, declined, or already present.
+7. Note in your summary whether the guard was installed, declined, or already present, and whether
+   the diverged-branch check was enabled or declined.
 
 ---
 
