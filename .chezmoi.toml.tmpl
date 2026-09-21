@@ -1,0 +1,15 @@
+{{- /* Rendered by `chezmoi init`. Existing machines must re-run it once.       */ -}}
+{{- /* sourceDir persists whatever source is in effect when init runs, so     */ -}}
+{{- /* run it from the main checkout, not from a .worktree/ copy.             */ -}}
+sourceDir = "{{ .chezmoi.sourceDir }}"
+
+[diff]
+pager = "delta"
+{{ if eq .chezmoi.os "windows" }}
+[merge]
+command = "powershell.exe"
+args = [
+    "-NoProfile", "-NonInteractive", "-Command",
+    {{ `"$base = '{{ .Target }}.base'; Copy-Item '{{ .Target }}' $base; code --new-window --wait --merge '{{ .Destination }}' '{{ .Target }}' $base '{{ .Source }}'; Remove-Item $base -ErrorAction SilentlyContinue",` }}
+]
+{{ end -}}
