@@ -23,6 +23,18 @@
 [hook "sig-summary"]
 	event = post-commit
 	command = {{ .chezmoi.homeDir }}/.config/git/sig-summary.sh
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	line-numbers = true
+	hyperlinks = true
+	hyperlinks-file-link-format = "vscode://file/{path}:{line}"
+[merge]
+	conflictStyle = zdiff3
+[diff]
+	colorMoved = default
 [commit]
 	gpgsign = true
 [rerere]
