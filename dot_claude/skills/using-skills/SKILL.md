@@ -56,6 +56,9 @@ digraph skill_flow {
 
 **In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you — follow it directly. Never use the Read tool on skill files.
 
+The announcement is one line at invocation. It is not a progress update: once the
+skill is running, report only on a break, a change of plan, or a decision needed.
+
 ## Skill Priority
 
 When multiple skills could apply:
