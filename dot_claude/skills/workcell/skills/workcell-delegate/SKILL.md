@@ -19,12 +19,16 @@ For each delegated executor task:
 3. Fill `TASK.md` as main. Do not make the executor rediscover facts that only exist in the user conversation. Do not summarize repository facts that the executor can cheaply recover itself.
 4. Set TASK status to `ready` when its contract is complete.
 5. Create a RUN with `workcell run create <task-dir>` and set TASK status to `running`.
-6. Spawn a fresh `team-executor` with these absolute paths in its prompt:
+6. Spawn a fresh `team-executor` with these absolute paths in its prompt, using Claude Haiku explicitly:
 
    `WORKCELL_TASK: <absolute TASK.md>`
    `WORKCELL_RUN: <absolute run-NNN.md>`
+   `Start your task in directory <Absolute path>`
 
    Do not duplicate the TASK body into the Agent prompt.
+
+   (Note: Path selection is temporarily mandatory since 2026/09/09 where Claude Code fails to create worktrees automatically.)
+   (Note: This explicit agent selection is temporary since 2026/09/06 where non-explicit specification does not reflect subagent config.)
 7. Never resume a completed executor instance. If the same Goal continues after a decision or failure, revise TASK and create a fresh RUN and fresh executor.
 8. Keep at most three `team-executor` instances active at once. Parallelize only truly independent tasks. Never run two active RUNs for the same TASK.
 
