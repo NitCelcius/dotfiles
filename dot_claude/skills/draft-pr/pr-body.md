@@ -31,6 +31,7 @@ If something local still matters, tell the user in chat instead.
 ## Process
 
 - Always a draft PR.
-- Push first with upstream set to the same-name remote branch. No force.
+- Push first with upstream set to the same-name remote branch. Ask before
+  force-pushing.
 - Write the body to a temp file, give its absolute path in chat, and wait for the
   user's review of the body before `gh pr create`. Delete the file afterwards.
