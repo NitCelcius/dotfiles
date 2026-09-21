@@ -8,6 +8,7 @@
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
+{{- /*   syncClaudeAiSkills — false: claude.ai skills stay out of the context  */ -}}
 {{- /* model, effortLevel, modelSettings and voice are deliberately left     */ -}}
 {{- /* alone: they are per-session choices, not configuration.              */ -}}
 {{- $keepOn := list "notion@claude-plugins-official" -}}
@@ -54,6 +55,7 @@
 {{- $cfg = setValueAtPath "permissions.deny" (concat $liveDeny $denyRules | uniq) $cfg -}}
 {{- $liveAsk := default (list) (dig "permissions" "ask" (list) $cfg) -}}
 {{- $cfg = setValueAtPath "permissions.ask" (concat $liveAsk $askRules | uniq) $cfg -}}
+{{- $cfg = setValueAtPath "syncClaudeAiSkills" false $cfg -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
 {{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
 {{- $cfg = setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook))) $cfg -}}
