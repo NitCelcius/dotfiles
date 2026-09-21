@@ -39,6 +39,9 @@ Do not add personal/local entries to `.gitignore`.
 - Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`
 - WIP commits: use `WIP: <plain description>`, e.g. `WIP: fix auth token expiry`
   - No conventional prefix needed — WIP commits are rebased and reworded before merging
+- A message written to a file for `git commit -F` goes in the repo's git dir as a `.md`
+  file (`git rev-parse --absolute-git-dir`, which also resolves in a worktree), nowhere
+  else.
 
 ### Repo root
 Before a git command that writes (`add`, `commit`, `checkout`, `reset`, `rebase`, `push`),
