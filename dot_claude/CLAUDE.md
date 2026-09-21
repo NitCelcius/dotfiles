@@ -40,10 +40,6 @@ Do not add personal/local entries to `.gitignore`.
 - WIP commits: use `WIP: <plain description>`, e.g. `WIP: fix auth token expiry`
   - No conventional prefix needed — WIP commits are rebased and reworded before merging
 
-### Session-start commit check
-At the start of a session, run `git diff HEAD --shortstat` to gauge pending changes.
-If the total insertions + deletions is roughly 300 or more, ask the user whether they want to commit before proceeding.
-
 ### Repo root
 Before a git command that writes (`add`, `commit`, `checkout`, `reset`, `rebase`, `push`),
 confirm the target with `git rev-parse --show-toplevel`. The working directory is often
