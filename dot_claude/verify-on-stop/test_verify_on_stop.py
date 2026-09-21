@@ -1,9 +1,10 @@
-"""Drive verify_on_stop.py end to end against a throwaway git repo.
+"""Tests for verify_on_stop.py: the parsers as unit tests, the hook end to end.
 
-Run: python test_verify_on_stop.py
+Run: uv run --with pytest pytest dot_claude/verify-on-stop
 
-The parser fixtures live in the hook itself (`--selftest`). This file covers what
-they cannot: that the guard really skips an unchanged tree, notices an edit to an
+The parser cases live in the hook itself (`--selftest` runs the same tables). The
+end-to-end tests drive the hook against a throwaway git repo and cover what the
+tables cannot: that the guard really skips an unchanged tree, notices an edit to an
 untracked file, blocks once on a failure, and never blocks twice in a row. The
 first two were real bugs caught here before the hook was wired into settings.
 """
@@ -12,13 +13,16 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
+import pytest
+
+import verify_on_stop
+
 HOOK = Path(__file__).resolve().parent / "verify_on_stop.py"
+PYTHON = f'"{sys.executable}"'
 
 BLOCK = """# CLAUDE.md
 
@@ -29,11 +33,30 @@ BLOCK = """# CLAUDE.md
 - **Out of scope**: nothing
 """
 
-results: list[tuple[bool, str, str]] = []
+FAILING_COMMAND = f"{PYTHON} -c \"import sys; print('boom detail'); sys.exit(3)\""
 
 
-def check(name: str, ok: bool, detail: str = "") -> None:
-    results.append((ok, name, detail))
+def parse_cases(cases: list[tuple]) -> list:
+    return [pytest.param(*case[1:], id=case[0]) for case in cases]
+
+
+@pytest.mark.parametrize("text, expected", parse_cases(verify_on_stop.SELFTEST_CASES))
+def test_parse_quick_command(text: str, expected: str | None) -> None:
+    assert verify_on_stop.parse_quick_command(text) == expected
+
+
+@pytest.mark.parametrize("status_z, expected", parse_cases(verify_on_stop.UNTRACKED_CASES))
+def test_untracked_paths(status_z: str, expected: list[str]) -> None:
+    assert verify_on_stop.untracked_paths(status_z) == sorted(expected)
+
+
+@pytest.mark.parametrize("status_z, expected", parse_cases(verify_on_stop.CHANGED_CASES))
+def test_changed_paths(status_z: str, expected: list[str]) -> None:
+    assert verify_on_stop.changed_paths(status_z) == sorted(expected)
+
+
+def git(repo: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True)
 
 
 def fire(repo: Path, data_root: Path, stop_hook_active: bool = False) -> subprocess.CompletedProcess:
@@ -52,130 +75,141 @@ def fire(repo: Path, data_root: Path, stop_hook_active: bool = False) -> subproc
     )
 
 
-def main() -> int:
-    tmp = Path(tempfile.mkdtemp(prefix="verifyhook-"))
-    repo = tmp / "repo"
-    data_root = tmp / "state"
-    repo.mkdir()
-    marker = repo / "ran.log"
+def write_block(repo: Path, command: str) -> None:
+    (repo / "CLAUDE.md").write_text(BLOCK.format(cmd=command), encoding="utf-8")
 
-    def git(*args: str) -> None:
-        subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
 
-    git("init", "-q")
-    git("config", "user.email", "t@example.com")
-    git("config", "user.name", "t")
-    git("config", "commit.gpgsign", "false")
-    (repo / "seed.txt").write_text("seed\n", encoding="utf-8")
-    git("add", "-A")
-    git("commit", "-qm", "seed")
+def counting_command(marker: Path) -> str:
+    return f"{PYTHON} -c \"open(r'{marker}','a').write('x')\""
 
+
+def recording_command(args_log: Path) -> str:
+    return (
+        f'{PYTHON} -c "import sys,io;'
+        f"io.open(r'{args_log}','a',encoding='utf-8')"
+        '.write(\' \'.join(sys.argv[1:])+chr(10))" {changed:*.py}'
+    )
+
+
+def run_count(marker: Path) -> int:
+    return marker.read_text().count("x") if marker.exists() else 0
+
+
+@pytest.fixture
+def repo(tmp_path: Path) -> Path:
+    path = tmp_path / "repo"
+    path.mkdir()
+    git(path, "init", "-q")
+    git(path, "config", "user.email", "t@example.com")
+    git(path, "config", "user.name", "t")
+    git(path, "config", "commit.gpgsign", "false")
+    (path / "seed.txt").write_text("seed\n", encoding="utf-8")
+    git(path, "add", "-A")
+    git(path, "commit", "-qm", "seed")
+    return path
+
+
+@pytest.fixture
+def data_root(tmp_path: Path) -> Path:
+    return tmp_path / "state"
+
+
+def test_no_claude_md_allows_stop(repo: Path, data_root: Path) -> None:
     r = fire(repo, data_root)
-    check("no CLAUDE.md -> allows stop", r.returncode == 0, f"rc={r.returncode} {r.stderr[:120]}")
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
 
+
+def test_no_verification_block_allows_stop(repo: Path, data_root: Path) -> None:
     (repo / "CLAUDE.md").write_text("# CLAUDE.md\n\n## Commands\n\n- `npm test`\n", encoding="utf-8")
     r = fire(repo, data_root)
-    check("no Verification block -> allows stop", r.returncode == 0, f"rc={r.returncode}")
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
 
-    passing = f"python -c \"open(r'{marker}','a').write('x')\""
-    (repo / "CLAUDE.md").write_text(BLOCK.format(cmd=passing), encoding="utf-8")
+
+def test_passing_quick_allows_stop_and_runs_the_command(repo: Path, data_root: Path) -> None:
+    marker = repo / "ran.log"
+    write_block(repo, counting_command(marker))
     r = fire(repo, data_root)
-    check("passing quick -> allows stop", r.returncode == 0, f"rc={r.returncode} {r.stderr[:200]}")
-    check(
-        "passing quick actually executed the command",
-        marker.exists() and marker.read_text().count("x") == 1,
-        f"marker={marker.read_text() if marker.exists() else '<missing>'!r}",
-    )
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert run_count(marker) == 1
 
+
+def test_unchanged_tree_skips_rerun(repo: Path, data_root: Path) -> None:
+    marker = repo / "ran.log"
+    write_block(repo, counting_command(marker))
+    fire(repo, data_root)
     r = fire(repo, data_root)
-    check("unchanged tree -> allows stop", r.returncode == 0, f"rc={r.returncode}")
-    check(
-        "unchanged tree -> skipped re-running",
-        marker.read_text().count("x") == 1,
-        f"marker={marker.read_text()!r}",
-    )
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert run_count(marker) == 1
 
+
+def test_tracked_edit_reruns(repo: Path, data_root: Path) -> None:
+    marker = repo / "ran.log"
+    write_block(repo, counting_command(marker))
+    fire(repo, data_root)
     (repo / "seed.txt").write_text("seed changed\n", encoding="utf-8")
-    r = fire(repo, data_root)
-    check(
-        "tracked edit -> ran again",
-        marker.read_text().count("x") == 2,
-        f"marker={marker.read_text()!r}",
-    )
+    fire(repo, data_root)
+    assert run_count(marker) == 2
 
+
+def test_untracked_edit_invalidates_cached_pass_and_blocks(repo: Path, data_root: Path) -> None:
     # CLAUDE.md is untracked here on purpose: editing an untracked file must
     # still invalidate the cached pass, or a new module never gets verified.
-    (repo / "CLAUDE.md").write_text(
-        BLOCK.format(cmd="python -c \"import sys; print('boom detail'); sys.exit(3)\""),
-        encoding="utf-8",
-    )
+    write_block(repo, counting_command(repo / "ran.log"))
+    fire(repo, data_root)
+    write_block(repo, FAILING_COMMAND)
     r = fire(repo, data_root)
-    check("untracked edit -> not skipped, and blocks (exit 2)", r.returncode == 2, f"rc={r.returncode}")
-    check("failure output reaches stderr", "boom detail" in r.stderr, f"stderr={r.stderr[:300]!r}")
+    assert r.returncode == verify_on_stop.EXIT_BLOCK_STOP, r.stderr
+    assert "boom detail" in r.stderr
 
-    r = fire(repo, data_root)
-    check("same failing state twice -> allows stop", r.returncode == 0, f"rc={r.returncode}")
 
-    (repo / "seed.txt").write_text("seed changed again\n", encoding="utf-8")
+def test_same_failing_state_twice_allows_the_second_stop(repo: Path, data_root: Path) -> None:
+    write_block(repo, FAILING_COMMAND)
+    first = fire(repo, data_root)
+    second = fire(repo, data_root)
+    assert first.returncode == verify_on_stop.EXIT_BLOCK_STOP, first.stderr
+    assert second.returncode == verify_on_stop.EXIT_ALLOW_STOP, second.stderr
+
+
+def test_stop_hook_active_allows_stop(repo: Path, data_root: Path) -> None:
+    write_block(repo, FAILING_COMMAND)
     r = fire(repo, data_root, stop_hook_active=True)
-    check("stop_hook_active -> allows stop", r.returncode == 0, f"rc={r.returncode}")
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
 
-    # --- {changed} targeting -------------------------------------------------
+
+def test_changed_placeholder_passes_only_matching_files(repo: Path, data_root: Path) -> None:
     args_log = repo / "args.log"
-    record = (
-        "python -c \"import sys,io;"
-        f"io.open(r'{args_log}','a',encoding='utf-8')"
-        ".write(' '.join(sys.argv[1:])+chr(10))\" {changed:*.py}"
-    )
-    (repo / "CLAUDE.md").write_text(BLOCK.format(cmd=record), encoding="utf-8")
+    write_block(repo, recording_command(args_log))
     (repo / "alpha.py").write_text("a = 1\n", encoding="utf-8")
     (repo / "notes.md").write_text("# notes\n", encoding="utf-8")
     r = fire(repo, data_root)
     recorded = args_log.read_text(encoding="utf-8") if args_log.exists() else ""
-    check("targeted quick ran", r.returncode == 0 and bool(recorded), f"rc={r.returncode} {r.stderr[:200]}")
-    check(
-        "targeting passed the changed .py file",
-        "alpha.py" in recorded,
-        f"recorded={recorded!r}",
-    )
-    check(
-        "targeting excluded the changed .md file",
-        "notes.md" not in recorded,
-        f"recorded={recorded!r}",
-    )
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert "alpha.py" in recorded
+    assert "notes.md" not in recorded
 
-    # With the .py work committed, only a non-matching file is dirty, so the
-    # command must not run at all. Committing first is the point: {changed} means
-    # "differs from HEAD", not "edited since the last run", so an uncommitted
-    # alpha.py would still legitimately match.
-    git("add", "-A")
-    git("commit", "-qm", "checkpoint")
+
+def test_changed_placeholder_skips_the_command_when_only_a_nonmatching_file_is_dirty(
+    repo: Path, data_root: Path
+) -> None:
+    # Committing first is the point: {changed} means "differs from HEAD", not
+    # "edited since the last run", so an uncommitted alpha.py would still match.
+    args_log = repo / "args.log"
+    write_block(repo, recording_command(args_log))
+    (repo / "alpha.py").write_text("a = 1\n", encoding="utf-8")
+    (repo / "notes.md").write_text("# notes\n", encoding="utf-8")
+    fire(repo, data_root)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "checkpoint")
     before = args_log.read_text(encoding="utf-8")
     (repo / "notes.md").write_text("# notes, revised\n", encoding="utf-8")
     r = fire(repo, data_root)
-    check("only non-matching file dirty -> allows stop", r.returncode == 0, f"rc={r.returncode}")
-    check(
-        "only non-matching file dirty -> command not run",
-        args_log.read_text(encoding="utf-8") == before,
-        f"before={before!r} after={args_log.read_text(encoding='utf-8')!r}",
-    )
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert args_log.read_text(encoding="utf-8") == before
 
-    bare = tmp / "notrepo"
+
+def test_not_a_git_repo_allows_stop(tmp_path: Path, data_root: Path) -> None:
+    bare = tmp_path / "notrepo"
     bare.mkdir()
-    (bare / "CLAUDE.md").write_text(BLOCK.format(cmd="exit 1"), encoding="utf-8")
+    write_block(bare, "exit 1")
     r = fire(bare, data_root)
-    check("not a git repo -> allows stop", r.returncode == 0, f"rc={r.returncode}")
-
-    failed = 0
-    for ok, name, detail in results:
-        print(f"{'PASS' if ok else 'FAIL'}  {name}")
-        if not ok:
-            failed += 1
-            print(f"      {detail}")
-    print(f"\n{len(results) - failed}/{len(results)} passed")
-    shutil.rmtree(tmp, ignore_errors=True)
-    return 1 if failed else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
