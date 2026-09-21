@@ -12,6 +12,12 @@
 .claude/skills/unity-mcp-testing-editor
 .claude/skills/unity-mcp-packages-docs
 
+# organize-photos depends on scripts, a 7z install and a Bitwarden item that
+# exist only on the home server, so no other machine gets it.
+{{ if ne .chezmoi.hostname "Icy-NucM6U" -}}
+.claude/skills/organize-photos
+{{ end -}}
+
 # Regression test for the Stop hook. Runs from the dotfiles checkout, where git
 # and a scratch directory are available; nothing needs it on a deployed machine.
 .claude/verify-on-stop/test_verify_on_stop.py
