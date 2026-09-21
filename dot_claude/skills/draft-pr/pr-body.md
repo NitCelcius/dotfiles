@@ -14,6 +14,7 @@ Leave out:
 - verification that only restates the diff (e.g. "settings.json differs only by the
   new key")
 - checks of local state (`.trash`, `chezmoi status`, the session's skill list)
+- commit signing state (signed or not) — signing is reconciled with the user in chat
 
 A check any machine can repeat, such as "no duplicate `name:` across the skills", stays.
 If something local still matters, tell the user in chat instead.
