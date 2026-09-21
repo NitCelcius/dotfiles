@@ -215,6 +215,8 @@ artifact it did not author — the filesystem, the console, the running app.
 
 If the assertion is cheap to keep, make it a regression test rather than discarding it.
 
+`verify-before-claiming` carries the tagging vocabulary for this rule.
+
 ## Reporting
 
 After executing a plan, close out under these headings, in this order. Adding further
@@ -233,7 +235,7 @@ the close-out of executed work.
 
 ## Code Review
 
-When starting a review and no target (worktree, branch, or PR) is explicitly specified, ask for confirmation before proceeding.
+When starting a review and no target (worktree, branch, or PR) is explicitly specified, ask for confirmation before proceeding. Mechanics live in `review-my-diff` and the built-in `/code-review`.
 
 ## Subagents
 
