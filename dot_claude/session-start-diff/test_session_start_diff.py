@@ -1,6 +1,6 @@
 """Drive session_start_diff.py against a throwaway repo and a linked worktree.
 
-Run: python test_session_start_diff.py
+Run: uv run --with pytest pytest dot_claude/session-start-diff
 
 Covers each row of the hook's behaviour: silent outside a repo and on a clean tree,
 topic check on any diff in the main checkout, no topic check in a worktree, and the
@@ -10,26 +10,16 @@ commit ask at the line threshold in both.
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
+
+import pytest
 
 HOOK = Path(__file__).resolve().parent / "session_start_diff.py"
 TOPIC_MARK = "same topic"
 COMMIT_MARK = "whether to commit"
-
-failures: list[str] = []
-passed = 0
-
-
-def check(name: str, ok: bool, detail: str = "") -> None:
-    global passed
-    if ok:
-        passed += 1
-        return
-    failures.append(f"{name}: {detail}")
+COMMIT_ASK_LINES = 300
 
 
 def git(cwd: Path, *args: str) -> None:
@@ -59,47 +49,57 @@ def stage_lines(repo: Path, name: str, count: int) -> None:
     git(repo, "add", name)
 
 
-def main() -> int:
-    root = Path(tempfile.mkdtemp())
-    try:
-        main_repo = root / "main"
-        worktree = root / "wt"
-        main_repo.mkdir()
-
-        check("outside a repo is silent", fire(main_repo) == "")
-
-        git(main_repo, "init", "-q")
-        git(main_repo, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "init")
-        git(main_repo, "worktree", "add", "-q", str(worktree), "-b", "topic")
-        check("clean tree is silent", fire(main_repo) == "")
-
-        stage_lines(main_repo, "a b.txt", 1)
-        out = fire(main_repo)
-        check("main 1 line: topic check", TOPIC_MARK in out, out)
-        check("main 1 line: no commit ask", COMMIT_MARK not in out, out)
-        check("file name with a space stays whole", "a b.txt" in out, out)
-
-        stage_lines(main_repo, "a b.txt", 300)
-        out = fire(main_repo)
-        check("main 300 lines: topic check", TOPIC_MARK in out, out)
-        check("main 300 lines: commit ask", COMMIT_MARK in out, out)
-
-        stage_lines(worktree, "c.txt", 1)
-        check("worktree 1 line is silent", fire(worktree) == "")
-
-        stage_lines(worktree, "c.txt", 300)
-        out = fire(worktree)
-        check("worktree 300 lines: no topic check", TOPIC_MARK not in out, out)
-        check("worktree 300 lines: commit ask", COMMIT_MARK in out, out)
-    finally:
-        shutil.rmtree(root, ignore_errors=True)
-
-    total = passed + len(failures)
-    for failure in failures:
-        print(f"FAIL {failure}")
-    print(f"{passed}/{total} passed")
-    return 1 if failures else 0
+@pytest.fixture
+def main_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "main"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    git(repo, "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", "init")
+    return repo
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+@pytest.fixture
+def worktree(main_repo: Path, tmp_path: Path) -> Path:
+    path = tmp_path / "wt"
+    git(main_repo, "worktree", "add", "-q", str(path), "-b", "topic")
+    return path
+
+
+def test_outside_a_repo_is_silent(tmp_path: Path) -> None:
+    assert fire(tmp_path) == ""
+
+
+def test_clean_tree_is_silent(main_repo: Path) -> None:
+    assert fire(main_repo) == ""
+
+
+def test_main_checkout_one_line_asks_for_the_topic_check_only(main_repo: Path) -> None:
+    stage_lines(main_repo, "a b.txt", 1)
+    out = fire(main_repo)
+    assert TOPIC_MARK in out, out
+    assert COMMIT_MARK not in out, out
+
+
+def test_file_name_with_a_space_stays_whole(main_repo: Path) -> None:
+    stage_lines(main_repo, "a b.txt", 1)
+    out = fire(main_repo)
+    assert "a b.txt" in out, out
+
+
+def test_main_checkout_at_the_threshold_asks_for_topic_and_commit(main_repo: Path) -> None:
+    stage_lines(main_repo, "a b.txt", COMMIT_ASK_LINES)
+    out = fire(main_repo)
+    assert TOPIC_MARK in out, out
+    assert COMMIT_MARK in out, out
+
+
+def test_worktree_one_line_is_silent(worktree: Path) -> None:
+    stage_lines(worktree, "c.txt", 1)
+    assert fire(worktree) == ""
+
+
+def test_worktree_at_the_threshold_asks_for_commit_without_topic_check(worktree: Path) -> None:
+    stage_lines(worktree, "c.txt", COMMIT_ASK_LINES)
+    out = fire(worktree)
+    assert TOPIC_MARK not in out, out
+    assert COMMIT_MARK in out, out
