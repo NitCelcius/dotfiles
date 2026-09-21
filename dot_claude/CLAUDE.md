@@ -104,13 +104,18 @@ any abbreviation or internal shorthand on first use in a session.
 
 ## Executing a Plan
 
-Before a run of tool calls, settle a mini plan: which calls, in what order, what each
-one is for. Then execute it without narrating.
+When a message from me arrives, plan the whole stretch until you next wait on me:
+which calls, in what order, and where my input is needed. Then execute it without
+narrating.
 
+- Ask what needs my confirmation at the start of that stretch — before a long run of
+  work, not midway. Don't hold back a question to look autonomous.
 - Batch independent tool calls into a single message. Turn count is the cost — a call
   that does not depend on an earlier result must not wait for one.
-- Put the intent in the call itself: a `#` comment in the shell command, a clear tool
-  `description`. I read the calls, so prose between them is redundant.
+- In a shell call with five or more commands, put one command per line and separate
+  logical groups with a blank line — not one long `&&` chain.
+- Put the intent in a clear tool `description`. I read the calls, so prose between
+  them is redundant.
 - Do not post progress updates mid-run. Speak up only when something breaks, when a
   finding changes the plan, or when a decision is needed — then say it immediately
   rather than saving it for the final report.
@@ -237,6 +242,9 @@ headings is fine when they carry something the four do not.
 
 A question, a short answer, or a single-step change stays prose. These headings are for
 the close-out of executed work.
+
+When a turn produces a file for me to review (PR body, plan, report), give its absolute
+path in the chat reply.
 
 ## Code Review
 
