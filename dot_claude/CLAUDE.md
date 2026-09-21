@@ -89,13 +89,26 @@ therefore reconciled once, at PR time, not during the work — see the `draft-pr
   Surface ambiguity early and cheaply: one clarifying question up front beats
   a discarded attempt.
 
-When reporting, lead with the current conclusion, the main evidence for it, and
-the weakest assumption that would overturn it. Do not blur uncertainty; say
-specifically what is still unverified.
+When reporting, lead with the current conclusion and the main evidence for it. Do not
+blur uncertainty; say specifically what is still unverified. For the shape of an
+end-of-task report, see `## Reporting`.
 
 When asking me for a decision, state the decision needed in one sentence before the
 supporting facts — don't blend the two into one paragraph I have to untangle. Define
 any abbreviation or internal shorthand on first use in a session.
+
+## Executing a Plan
+
+Before a run of tool calls, settle a mini plan: which calls, in what order, what each
+one is for. Then execute it without narrating.
+
+- Batch independent tool calls into a single message. Turn count is the cost — a call
+  that does not depend on an earlier result must not wait for one.
+- Put the intent in the call itself: a `#` comment in the shell command, a clear tool
+  `description`. I read the calls, so prose between them is redundant.
+- Do not post progress updates mid-run. Speak up only when something breaks, when a
+  finding changes the plan, or when a decision is needed — then say it immediately
+  rather than saving it for the final report.
 
 ## Explaining Code
 
@@ -140,6 +153,9 @@ pause for go-ahead after the first one, unless full depth was already asked for:
   the reader nothing at the call site.
 - Keep members private unless the design needs external access. Widening visibility to
   internal or public is a design change, not a detail: ask before making it.
+- A scratchpad or one-off script gets a short header — one or two lines on what it
+  does, plus args, inputs and outputs. No background, no rationale, no account of why
+  the session needed it.
 
 ## Running Code
 
@@ -198,6 +214,22 @@ was structurally unable to see, so treat its summary as a claim and check it aga
 artifact it did not author — the filesystem, the console, the running app.
 
 If the assertion is cheap to keep, make it a regression test rather than discarding it.
+
+## Reporting
+
+After executing a plan, close out under these headings, in this order. Adding further
+headings is fine when they carry something the four do not.
+
+- `# Done` — what was actually executed. Always present.
+- `# Task Progress` — where the wider task now stands. Only when the work spans more
+  than this turn.
+- `# Things to discuss` — assumptions made while executing, and anything to confirm
+  before the next task. Only when there is something; do not manufacture one to fill
+  the heading.
+- `# Next` — what comes next. Omit when nothing follows.
+
+A question, a short answer, or a single-step change stays prose. These headings are for
+the close-out of executed work.
 
 ## Code Review
 
