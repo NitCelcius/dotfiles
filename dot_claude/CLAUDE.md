@@ -25,15 +25,8 @@
 
 ## Git Conventions
 
-### Ignore patterns
-Use `.git/info/exclude` for local-only ignore patterns (e.g. worktree directories).
-Do not add personal/local entries to `.gitignore`.
-
-### Branch naming
-- Bug fixes: `bugfix/(name-of-thing)` — preferred; `fix/` is acceptable
-- Features: `feat/(name-of-something)`
-- Append date as `YYMMDD` suffix only to avoid name conflicts, e.g. `feat/(name)/260328`
-- WIP branches: prefix with `wip/`, e.g. `wip/bugfix/(name)`, `wip/feat/(name)`
+Branch naming, local ignore patterns, fetching, rebasing, merging, and the signing
+fallback live in the `git-workflow` skill.
 
 ### Commit messages
 - Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`
@@ -56,33 +49,10 @@ confirm the target with `git rev-parse --show-toplevel`. The working directory i
 not the repo you mean — the chezmoi source, worktrees, and Unity projects all sit
 adjacent to or nested near each other.
 
-### Fetch before diverging
-Always `git fetch origin` immediately before `rebase`, `merge`, or reasoning about
-whether a branch has diverged — never rebase onto or reason about a stale local ref.
+### Rewriting others' state
 Never force-push without first showing `git log --oneline @{u}..` (what you'd overwrite)
 and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
 current working tree — create a worktree instead ([[using-git-worktrees]]).
-
-### Rebasing
-Before `git rebase --onto <target>`, always `git fetch` first and rebase onto the
-fetched `origin/<target>` ref, not a possibly-stale local branch ref — unless the goal
-is specifically to preserve local history as-is (e.g. deliberately rebasing onto a
-known-stale local snapshot). Fetching is cheap; a stale local ref can silently diverge
-from `origin/<target>` when someone else rebased or force-pushed it, producing a
-result that looks correct locally but conflicts against the real upstream.
-
-### Merge strategy
-Rebase & fast-forward merge. Not squash merge.
-GitHub does not sign commits merged this way — the branch commits land on `main` as-is,
-keeping their original signature state.
-
-### SSH signing fallback
-If the signing agent is unavailable mid-commit, retry with `--no-gpg-sign` immediately.
-Do not ask, do not investigate the cause — an unsigned WIP commit is never worth
-interrupting the work for.
-When the task is done, state plainly that the commits were made without signing.
-Because the merge is rebase & ff, unsigned commits stay unsigned on `main`. Signing is
-therefore reconciled once, at PR time, not during the work — see the `draft-pr` skill.
 
 ### Pull requests
 Open every PR as a draft, and get user review of the body before `gh pr create` — with
@@ -151,15 +121,6 @@ narrating.
 - Do not post progress updates mid-run. Speak up only when something breaks, when a
   finding changes the plan, or when a decision is needed — then say it immediately
   rather than saving it for the final report.
-
-## Explaining Code
-
-When asked "how does X work" or for an explanation of behavior, answer in tiers and
-pause for go-ahead after the first one, unless full depth was already asked for:
-1. Concept — a few plain sentences on what it does, sourced from a spec/design doc
-   when one exists, not inferred from UI resource strings or naming.
-2. Boundaries — which module/layer owns what.
-3. Call chain — the concrete file:line trace.
 
 ## Before Editing
 
@@ -284,30 +245,9 @@ When starting a review and no target (worktree, branch, or PR) is explicitly spe
 
 ## Subagents
 
-- Dispatch a subagent when the work produces large output that main will not
-  need to re-read (verification loops, log triage, cross-repo search).
-- Keep it in the main session when the output will be referenced repeatedly.
-- Default: return conclusions with file:line references, not raw content.
-  Quote source only when the conclusion cannot stand without it.
-- Read-only work (search, log triage, inventory) needs no confirmation.
-- Before dispatching subagents that write code or edit files, main asks the user
-  once, covering the whole batch. Within that batch a subagent executes without
-  stopping to ask for routine permission.
-- If a subagent hits a decision the batch approval did not cover, it surfaces it
-  immediately — it does not guess and keep going, and it does not hold the
-  question for its final report. A decision held is more expensive than a
-  subagent that stops early, because work built on the wrong branch of it is
-  thrown away.
-- Delegate work whose result is cheap to verify. If checking the output costs about
-  as much as producing it, do it in main instead. Claims a subagent cannot observe
-  about itself — whether it was blocked, whether it waited — are never verifiable;
-  do not build on them.
-- Name the check before dispatching, not after: which artifact will show whether this
-  worked, and what failure would look like in it. A check chosen after reading the
-  report tends to be one the report already passes. On return, run it against that
-  artifact, not against the agent's summary; if a load-bearing claim has no checkable
-  artifact, say so rather than passing it through.
-- For dispatching an agent purely to *check* a result, see `verify-before-claiming`.
+When to dispatch, what a subagent returns, what needs approval, and how to check its
+result live in the `dispatching-subagents` skill.
+
 - Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
   main session's Opus, which is slow and costly. Default to Sonnet — iterative
   testing and coding are its job. Use Haiku only for read-only or judgment-free

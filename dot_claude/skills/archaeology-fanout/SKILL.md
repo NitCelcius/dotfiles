@@ -56,4 +56,5 @@ into six agents.
 - Don't derive a feature's official name or intended behavior from UI strings when
   a spec/design doc lane is available.
 - Don't open with the file:line call chain when the user asked "what does this do"
-  — lead with concept, per CLAUDE.md.
+  — lead with concept (step 6). The tiers apply to an inline answer too, not only
+  to a fanout.

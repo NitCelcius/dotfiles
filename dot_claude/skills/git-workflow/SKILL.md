@@ -1,0 +1,41 @@
+---
+name: git-workflow
+description: Use before creating a branch, adding a local ignore pattern, fetching, rebasing, or merging, and when a commit fails to sign. Holds branch naming, ignore-pattern placement, fetch-before-rebase, the merge strategy, and the SSH signing fallback. Commit message format, repo-root checks, and force-push rules stay in the global CLAUDE.md.
+---
+
+# Git workflow
+
+## Ignore patterns
+Use `.git/info/exclude` for local-only ignore patterns (e.g. worktree directories).
+Do not add personal/local entries to `.gitignore`.
+
+## Branch naming
+- Bug fixes: `bugfix/(name-of-thing)` — preferred; `fix/` is acceptable
+- Features: `feat/(name-of-something)`
+- Append date as `YYMMDD` suffix only to avoid name conflicts, e.g. `feat/(name)/260328`
+- WIP branches: prefix with `wip/`, e.g. `wip/bugfix/(name)`, `wip/feat/(name)`
+
+## Fetch before diverging
+Always `git fetch origin` immediately before `rebase`, `merge`, or reasoning about
+whether a branch has diverged — never rebase onto or reason about a stale local ref.
+
+## Rebasing
+Before `git rebase --onto <target>`, always `git fetch` first and rebase onto the
+fetched `origin/<target>` ref, not a possibly-stale local branch ref — unless the goal
+is specifically to preserve local history as-is (e.g. deliberately rebasing onto a
+known-stale local snapshot). Fetching is cheap; a stale local ref can silently diverge
+from `origin/<target>` when someone else rebased or force-pushed it, producing a
+result that looks correct locally but conflicts against the real upstream.
+
+## Merge strategy
+Rebase & fast-forward merge. Not squash merge.
+GitHub does not sign commits merged this way — the branch commits land on `main` as-is,
+keeping their original signature state.
+
+## SSH signing fallback
+If the signing agent is unavailable mid-commit, retry with `--no-gpg-sign` immediately.
+Do not ask, do not investigate the cause — an unsigned WIP commit is never worth
+interrupting the work for.
+When the task is done, state plainly that the commits were made without signing.
+Because the merge is rebase & ff, unsigned commits stay unsigned on `main`. Signing is
+therefore reconciled once, at PR time, not during the work — see the `draft-pr` skill.
