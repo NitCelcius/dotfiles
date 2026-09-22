@@ -375,7 +375,11 @@ def run() -> int:
         log_decision("git-status-unavailable", cwd=cwd_text)
         return EXIT_ALLOW_STOP
 
-    key = os.path.normcase(str(root))
+    # One entry per distinct check: a root and a nested CLAUDE.md in the same repo
+    # must not share a pass or a block. The command always runs at `root`, so the
+    # instruction file and its command complete the identity. Entries keyed by
+    # root alone (the old format) no longer match and are simply cache misses.
+    key = "\n".join((os.path.normcase(str(root)), os.path.normcase(str(claude_md)), command))
     state = load_state()
     entry = state.get(key, {})
     fingerprint = working_tree_fingerprint(root, status)
