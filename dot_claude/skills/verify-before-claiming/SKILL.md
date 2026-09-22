@@ -56,6 +56,10 @@ A verifier subagent costs a round trip and a second context. Spend it only when
 
 Two out of three is a no. So is "this feels important".
 
+This test is for a verifier you dispatch unprompted. When the user asks for a second
+opinion — for any reason, a hunch included — arrange it without asking them to
+justify it. The artifact rule below still applies.
+
 | Work | Verifier? | How |
 |---|---|---|
 | Numeric analysis, benchmarks | Yes | Hand it the input fixture and the produced numbers. Ask it to derive the expected values itself |

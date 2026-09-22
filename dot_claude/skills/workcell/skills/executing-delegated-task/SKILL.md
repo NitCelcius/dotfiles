@@ -45,7 +45,7 @@ Do not classify a task as blocked merely because it is difficult.
 
 When useful, record evidence-backed facts in Observations. `Notes for lead` is optional. Use it only for an evidence-supported insight likely to change the parent's next decision. Do not invent a numeric confidence score or add filler speculation.
 
-If you made code changes worth returning, create a local commit before finishing. Use `workcell: <task-slug> run <NNN>` as the default message and write its tip hash to `result_commit`. Never push.
+If you made code changes worth returning, create a local commit before finishing. Write the message in the WIP form from the global commit rules, `WIP: <type>(<feature, optional>): <change>`, with a body only when the change is not self-evident and write its tip hash to `result_commit`. Never push.
 
 Set RUN final status and `finished_at` before returning. Do not modify TASK.
 

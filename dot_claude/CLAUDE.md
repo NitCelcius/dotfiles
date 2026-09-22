@@ -37,8 +37,15 @@ Do not add personal/local entries to `.gitignore`.
 
 ### Commit messages
 - Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`
-- WIP commits: use `WIP: <plain description>`, e.g. `WIP: fix auth token expiry`
-  - No conventional prefix needed — WIP commits are rebased and reworded before merging
+- WIP commits: `WIP: <type>(<feature, optional>): <change>`, e.g.
+  `WIP: feat(auth): refresh expired tokens`. A commit that is not WIP drops the
+  `WIP:` prefix.
+- Subject: what was done. Body: usually about two lines on how it was done — the code
+  should explain the rest. Write for someone who never saw the session: no task
+  numbers or other session-internal references. Include the issue number when working
+  on an issue.
+- Omit the body when the diff is self-evident: a config-only change, or about 10 lines
+  or fewer.
 - A message written to a file for `git commit -F` goes in the repo's git dir as a `.md`
   file (`git rev-parse --absolute-git-dir`, which also resolves in a worktree), nowhere
   else.
@@ -101,6 +108,20 @@ When asking me for a decision, state the decision needed in one sentence before 
 supporting facts — don't blend the two into one paragraph I have to untangle. Define
 any abbreviation or internal shorthand on first use in a session.
 
+Act as a brake. When an instruction of mine departs from the plan we agreed on, or
+walks into a known mistake, say so once with your reason before following it. Known
+mistakes include:
+- an abstraction, dependency, or config knob added for a single use
+- reimplementing something the codebase already provides
+- patching a symptom at the call site when the cause is upstream
+- editing a generated or deployed copy instead of its source
+- hard-coding a machine-specific path, value, or secret
+- swallowing an error so a failure looks like success
+- mixing an unrelated change into the current commit or PR
+
+This is optional — don't manufacture objections. When I invoke `/hear-my-plan`, just
+listen.
+
 ## Executing a Plan
 
 When a message from me arrives, plan the whole stretch until you next wait on me:
@@ -108,7 +129,19 @@ which calls, in what order, and where my input is needed. Then execute it withou
 narrating.
 
 - Ask what needs my confirmation at the start of that stretch — before a long run of
-  work, not midway. Don't hold back a question to look autonomous.
+  work, not midway. Collect the open questions and ask them together. Don't hold
+  back a question to look autonomous.
+- One approval covers every task it lists. Keep tasks small, but run them without
+  stopping between them; I may extend the approval while work runs. Stop and ask
+  only when an action falls outside what was approved.
+- Two kinds of action are never covered implicitly and must be named in the
+  approval: deleting a file I have not seen listed, and changing a public API or
+  data contract. When one was named, do it, then list it in two places: under its
+  own heading in the PR body, and at the very end of the message that hands the
+  turn back to me.
+- A newly discovered implementation detail is not a new decision for me. An
+  invalidated requirement, a scope change, or a product tradeoff is. Presenting an
+  unchanged design in new words does not need a fresh approval.
 - Batch independent tool calls into a single message. Turn count is the cost — a call
   that does not depend on an earlier result must not wait for one.
 - In a shell call with five or more commands, put one command per line and separate
@@ -130,7 +163,7 @@ pause for go-ahead after the first one, unless full depth was already asked for:
 
 ## Before Editing
 
-- Before changing logic that depends on data shapes, expected values, or canonical sources: read the actual source first, state the assumption explicitly, and wait for confirmation before editing.
+- Before changing logic that depends on data shapes, expected values, or canonical sources: read the actual source first, state the assumption explicitly, and wait for confirmation before editing. Two exceptions skip the wait, not the statement: in plan mode, put the assumption in the plan (approving the plan covers it); and when what settles the assumption is my prompt or our conversation, proceed.
 - For refactors spanning more than ~5 files: lay out the commit plan (what changes, in what order, verification step per commit) before touching any file.
 - If the same kind of transformation spans 3 or more files, do not hand-edit. Write a script and verify it with the diff.
 - Do not drop an existing abstraction (dataclass, base class, config object) as part of an unrelated refactor. If removing it looks necessary, stop and ask.
@@ -140,9 +173,9 @@ pause for go-ahead after the first one, unless full depth was already asked for:
   next `chezmoi apply` silently reverts it.
 - Do not modify code outside the change you were asked for. This includes adding
   comments to blocks you did not write or modify. Keep the changed-line count minimal.
-- When something outside that scope looks like it should change, say so at the moment
-  you notice it — not batched into the final report. Describe it, then continue the
-  original work. Do not make the change unprompted.
+- When something outside that scope looks like it should change, ask me about it in
+  chat at the moment you notice it — not batched into the final report. Describe it,
+  then continue the original work. Do not make the change unprompted.
 - Split a destructive operation into three steps: produce a reviewable plan artifact
   (a CSV, a file list), execute it, then produce a measured report of what actually
   happened. Never fold the plan into the same step that executes it.
@@ -275,7 +308,14 @@ When starting a review and no target (worktree, branch, or PR) is explicitly spe
   artifact, not against the agent's summary; if a load-bearing claim has no checkable
   artifact, say so rather than passing it through.
 - For dispatching an agent purely to *check* a result, see `verify-before-claiming`.
-- Commits are always made by main.
+- Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
+  main session's Opus, which is slow and costly. Default to Sonnet — iterative
+  testing and coding are its job. Use Haiku only for read-only or judgment-free
+  repeated operations, never where a decision or a change is needed. When Sonnet is
+  struggling, hand the work to Opus.
+- Only main integrates, cleans up history, and pushes. Subagents do not commit,
+  except a Workcell executor inside an activated `/workcell-delegate` plan, which
+  makes local WIP commits in its own worktree.
 
 ### Workcell gate
 
