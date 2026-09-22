@@ -43,8 +43,10 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
@@ -113,11 +115,12 @@ def find_claude_md(cwd: Path, ceiling: Path) -> Path | None:
     return None
 
 
-def git(args: list[str], cwd: Path) -> str | None:
+def git(args: list[str], cwd: Path, env: dict[str, str] | None = None) -> str | None:
     try:
         done = subprocess.run(
             ["git", *args],
             cwd=cwd,
+            env=env,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -214,41 +217,42 @@ def untracked_paths(status_z: str) -> list[str]:
 
 
 def working_tree_fingerprint(root: Path, status: str) -> str | None:
-    """Hash HEAD, the uncommitted patch, and untracked file contents.
+    """Git tree hash of the working tree's content, untracked files included.
 
-    `git diff HEAD` covers tracked files and `git status` names untracked ones,
-    but neither reflects an *edit to an untracked file* — the case where Claude
-    writes a new module and keeps revising it. Without hashing those contents the
-    guard would skip verification for the whole life of a new file.
+    Content only, not history: committing a tree that already passed keeps the same
+    fingerprint, so the check is not re-run just because HEAD moved. Untracked files
+    go into the tree too — otherwise an *edit to an untracked file* (a new module
+    Claude keeps revising) would never invalidate a pass.
+
+    Built by `git add -A` into a scratch copy of the index, which leaves the real
+    index alone and reuses its stat cache. Returns None when untracked content
+    exceeds MAX_FINGERPRINT_BYTES or git cannot build the tree.
     """
-    head = git(["rev-parse", "HEAD"], root) or ""
-    patch = git(["diff", "HEAD"], root) or ""
-
-    digest = hashlib.sha256()
     budget = MAX_FINGERPRINT_BYTES
-    for part in (head, status, patch):
-        blob = part.encode("utf-8", "replace")
-        budget -= len(blob)
-        if budget < 0:
-            return None  # Too big to fingerprint cheaply; treat as always changed.
-        digest.update(blob)
-        digest.update(b"\0")
-
     for relative in untracked_paths(status):
         target = root / relative
         try:
             if not target.is_file():
                 continue
-            blob = target.read_bytes()
+            budget -= target.stat().st_size
         except OSError:
             return None
-        budget -= len(blob)
         if budget < 0:
+            return None  # Too big to fingerprint cheaply; treat as always changed.
+
+    index = git(["rev-parse", "--git-path", "index"], root)
+    if index is None:
+        return None
+    with tempfile.TemporaryDirectory() as scratch:
+        scratch_index = Path(scratch) / "index"
+        real_index = root / index.strip()
+        if real_index.is_file():
+            shutil.copyfile(real_index, scratch_index)
+        env = {**os.environ, "GIT_INDEX_FILE": str(scratch_index)}
+        if git(["add", "-A"], root, env) is None:
             return None
-        digest.update(relative.encode("utf-8", "replace"))
-        digest.update(blob)
-        digest.update(b"\0")
-    return digest.hexdigest()
+        tree = git(["write-tree"], root, env)
+    return tree.strip() if tree else None
 
 
 def shallow_fingerprint(status: str) -> str:

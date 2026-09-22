@@ -151,6 +151,17 @@ def test_tracked_edit_reruns(repo: Path, data_root: Path) -> None:
     assert run_count(marker) == 2
 
 
+def test_committing_a_passed_tree_keeps_the_cached_pass(repo: Path, data_root: Path) -> None:
+    marker = repo / "ran.log"
+    write_block(repo, counting_command(marker))
+    fire(repo, data_root)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "checkpoint")
+    r = fire(repo, data_root)
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert run_count(marker) == 1
+
+
 def test_untracked_edit_invalidates_cached_pass_and_blocks(repo: Path, data_root: Path) -> None:
     # CLAUDE.md is untracked here on purpose: editing an untracked file must
     # still invalidate the cached pass, or a new module never gets verified.
