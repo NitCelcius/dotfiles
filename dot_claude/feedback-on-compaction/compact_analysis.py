@@ -86,6 +86,10 @@ class Compact:
     break_even_before_pre_size: bool = False
     break_even_before_next_compact: bool = False
     compact_overhead_usd_est: float = 0.0
+    reread_cost_usd_est: float = 0.0
+    final_context_tokens: int = 0
+    gross_saved_usd_est: float = 0.0
+    net_saved_usd_est: float = 0.0
     model: str = "generic"
 
 
@@ -139,14 +143,14 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def extract_tool_metadata(rows: list[dict[str, Any]]) -> tuple[dict[str, tuple[str, str]], dict[int, tuple[str, str, int]]]:
+def extract_tool_metadata(rows: list[dict[str, Any]]) -> tuple[dict[str, tuple[str, dict[str, Any]]], dict[int, tuple[str, dict[str, Any], int]]]:
     """Return tool_use_id metadata and result metadata indexed by row.
 
-    Paths are retained only in memory to identify repeated reads; they are never
+    Inputs are retained only in memory to identify repeated reads; they are never
     exported, because transcript/tool arguments can contain private material.
     """
-    uses: dict[str, tuple[str, str]] = {}
-    results: dict[int, tuple[str, str, int]] = {}
+    uses: dict[str, tuple[str, dict[str, Any]]] = {}
+    results: dict[int, tuple[str, dict[str, Any], int]] = {}
     for idx, row in enumerate(rows):
         msg = row.get("message") or {}
         content = msg.get("content") or []
@@ -158,12 +162,11 @@ def extract_tool_metadata(rows: list[dict[str, Any]]) -> tuple[dict[str, tuple[s
             if item.get("type") == "tool_use":
                 name = str(item.get("name") or "")
                 inp = item.get("input") or {}
-                arg = json.dumps(inp, ensure_ascii=False, sort_keys=True)
-                uses[str(item.get("id"))] = (name, arg)
+                uses[str(item.get("id"))] = (name, inp)
             elif item.get("type") == "tool_result":
                 tool_id = str(item.get("tool_use_id") or "")
-                name, arg = uses.get(tool_id, ("", ""))
-                results[idx] = (name, arg, text_chars(item.get("content")))
+                name, inp = uses.get(tool_id, ("", {}))
+                results[idx] = (name, inp, text_chars(item.get("content")))
     return uses, results
 
 
@@ -172,15 +175,37 @@ def is_mcp(name: str) -> bool:
     return "mcp" in name or name.startswith("mcp__") or "unity" in name
 
 
-def read_signature(name: str, arg: str) -> str:
+# Fields that identify *what* was read, excluding range/formatting args (offset,
+# limit, head_limit, -n/-C/-A/-i/-o, output_mode) so a second read of the same
+# target is caught even when the range or flags differ.
+READ_KEY_FIELDS = {
+    "Read": ("file_path",),
+    "Grep": ("path", "pattern"),
+    "Glob": ("pattern", "path"),
+}
+BASH_READ_RE = re.compile(r"\b(cat|head|tail|rg|grep|type|get-content|select-string)\b", re.IGNORECASE)
+
+
+def read_signature(name: str, inp: dict[str, Any]) -> str:
+    """Best-effort identity for a read-like tool call, used to flag repeats.
+
+    Read/Grep/Glob are normalized on their semantically relevant fields only, so
+    a repeat read of the same file/pattern is detected regardless of offset,
+    limit, or output flags. Anything else falls back to the full argument set,
+    which under-detects repeats that differ only in those fields. The argument
+    values stay in memory only and are never exported.
+    """
+    if name in READ_KEY_FIELDS:
+        parts = [str(inp.get(k)) for k in READ_KEY_FIELDS[name] if inp.get(k) not in (None, "")]
+        return f"{name}:" + "|".join(parts) if parts else ""
+    if name == "Bash":
+        command = str(inp.get("command") or "")
+        return f"Bash:{command.strip()}" if BASH_READ_RE.search(command) else ""
     low = name.lower()
     readish = any(x in low for x in ("read", "open", "view", "grep", "glob", "find"))
-    shell_read = any(x in arg.lower() for x in ("get-content", "select-string", " rg ", "rg --", "type "))
-    if not (readish or shell_read):
+    if not readish:
         return ""
-    # A stable digest would be ideal, but avoiding another import keeps the CSV
-    # completely path-free.  The argument itself stays in memory only.
-    return arg
+    return f"{name}:" + json.dumps(inp, ensure_ascii=False, sort_keys=True)
 
 
 def parse_claude_file(path: Path) -> tuple[list[Request], list[Compact]]:
@@ -234,6 +259,11 @@ def parse_claude_file(path: Path) -> tuple[list[Request], list[Compact]]:
             reasoning_output=0,
         )
         selected.append((idx, request))
+    # A handful of assistant rows carry no usage at all (cancelled/interrupted
+    # generations with no matching API response). They are not billed requests;
+    # keeping them corrupts context_delta for both their neighbours (a spurious
+    # drop to 0, then a spurious jump back up).
+    selected = [(idx, r) for idx, r in selected if r.context_tokens > 0 or r.output > 0]
     selected.sort(key=lambda x: x[0])
 
     # Estimate how non-model context growth divides between tool/MCP results.
@@ -255,8 +285,8 @@ def parse_claude_file(path: Path) -> tuple[list[Request], list[Compact]]:
             req.tool_result_tokens_est = tool_tokens
             req.mcp_result_tokens_est = tool_tokens * sum(meta[2] for _, meta in candidates if is_mcp(meta[0])) / total_chars
             reread_chars = 0
-            for _, (name, arg, chars) in candidates:
-                sig = read_signature(name, arg)
+            for _, (name, inp, chars) in candidates:
+                sig = read_signature(name, inp)
                 if sig and sig in seen_reads:
                     reread_chars += chars
                 if sig:
@@ -375,6 +405,7 @@ def enrich_compacts(requests: list[Request], compacts: list[Compact], prices: di
                 event.post_tokens = after[0].context_tokens
                 event.fixed_context_tokens_est = max(0, event.post_tokens - event.compact_payload_tokens)
             event.requests_observed = len(after)
+            event.final_context_tokens = after[-1].context_tokens
             event.reread_tokens_est = sum(r.reread_tokens_est for r in after)
             event.tool_tokens_after_est = sum(r.tool_result_tokens_est for r in after)
             event.mcp_tokens_after_est = sum(r.mcp_result_tokens_est for r in after)
@@ -397,15 +428,26 @@ def enrich_compacts(requests: list[Request], compacts: list[Compact], prices: di
             price = price_for(event.model, prices)
             p_read = price.get("cache_read", price.get("input", 1.0) * 0.1)
             p_output = price.get("output", 5.0)
-            # Summary input is not logged.  Default assumes the pre-context is a
-            # cache hit; summary output uses the explicitly labelled estimate.
+            # Summary input is never logged (no usage record for the compaction
+            # call exists in the transcript). Default treats the pre-context as a
+            # cache hit: the compaction call runs inside the same session, inherits
+            # its tool/system context, and typically fires within cache TTL of the
+            # last turn, so there is no structural reason for it to miss the cache.
+            # break_even_requests_summary_uncached is a conservative upper bound for
+            # the case that assumption is wrong, not an equally likely alternative.
             summary_cost = (event.pre_tokens * p_read + event.summary_tokens_est * p_output) / 1_000_000
             first_write = after[0].cache_write
             p_write = price.get("cache_write_1h", price.get("cache_write", price.get("input", 1.0) * 1.25))
             reset_cost = first_write * p_write / 1_000_000
-            reread_intro_cost = event.reread_tokens_est * price.get("input", 1.0) / 1_000_000
+            # Claude Code writes essentially all new context to cache each turn, so
+            # re-fetched material is billed as a fresh cache write, not a plain read:
+            # compacting costs two writes (the reset transcript, then the reread).
+            reread_intro_cost = event.reread_tokens_est * p_write / 1_000_000
+            event.reread_cost_usd_est = reread_intro_cost
             event.compact_overhead_usd_est = summary_cost + reset_cost + reread_intro_cost
             saving_per_request = saved * p_read / 1_000_000
+            event.gross_saved_usd_est = saving_per_request * event.requests_observed
+            event.net_saved_usd_est = event.gross_saved_usd_est - event.compact_overhead_usd_est
             event.break_even_requests = event.compact_overhead_usd_est / saving_per_request if saving_per_request else math.inf
             low_cost = event.compact_overhead_usd_est + (event.summary_tokens_low - event.summary_tokens_est) * p_output / 1_000_000
             high_cost = event.compact_overhead_usd_est + (event.summary_tokens_high - event.summary_tokens_est) * p_output / 1_000_000
@@ -590,14 +632,57 @@ def render_report(out: Path, requests: list[Request], compacts: list[Compact], s
         f"- Positive context growth/request after compact: median {median(growth):,.0f} tokens",
         f"- Estimated MCP share of tool-result carry-in: median {median(mcp_share)*100:.1f}% (available events; character-allocation estimate)", "",
         "## Break-even summary", "",
-        f"- Estimated break-even: median {median(be):.1f} requests; p25 {percentile(be, .25):.1f}; p75 {percentile(be, .75):.1f}.",
-        f"- If the unlogged summary input is fully uncached instead: median {median(be_uncached):.1f} requests (sensitivity bound).",
+        f"- Estimated break-even (default: pre-context priced as a cache-hit read): median {median(be):.1f} requests; p25 {percentile(be, .25):.1f}; p75 {percentile(be, .75):.1f}.",
+        f"- Conservative upper bound (if the unlogged summary input turns out to be fully uncached): median {median(be_uncached):.1f} requests.",
+        "- The compaction call's own usage is never logged, so the default cannot be directly verified. It is favored over the upper bound because the compaction call runs inside the same session (inherits its tool/system context — see preCompactDiscoveredTools in compactMetadata) and typically fires within minutes of the last turn, well inside cache TTL; there is no structural reason for it to miss the cache. Treat the upper bound as a worst case, not an equally likely scenario.",
         f"- Events breaking even before returning to the old pre-size: {sum(e.break_even_before_pre_size for e in usable_events)}/{len(usable_events)}.",
         f"- Events breaking even before the next compact/end: {sum(e.break_even_before_next_compact for e in usable_events)}/{len(usable_events)}.",
-        "- This estimate prices the unlogged summary input as a cache read and summary output at the model output rate.",
         "- Fixed project/system context cancels in the A-vs-B comparison. It is not counted as a compact saving.", "",
         "- Current OpenAI GPT-5.4/5.6 pricing doubles input for prompts above 272k; the threshold replay reports token-area only and does not hide this price discontinuity.", "",
-        "## Price assumptions (USD/MTok, retrieved 2026-08-12)", "",
+        "## Per-compact digest", "",
+        "Two tables, one row per compact event each, in session order.", "",
+        "### Timing and regrowth", "",
+        "\"Final context\" is the context size at the last observed request before the next compact (or",
+        "session end) — i.e. how far it grew back. \"Regained pre-size at\" is the request count at which",
+        "context first reached the old pre-compact size again, or \"never (within window)\" if it did not.",
+        "", "| Date | Src | Trigger | Pre→Post (k) | Observed req | Final context (k) | Regained pre-size at |",
+        "|---|---|---|---:|---:|---:|---:|",
+    ]
+    for e in sorted(usable_events, key=lambda e: parse_ts(e.timestamp)):
+        regained = "never (within window)" if e.requests_to_pre_size < 0 else f"req {e.requests_to_pre_size}"
+        lines.append(
+            f"| {e.timestamp[:10] or 'unknown'} | {e.source} | {e.trigger} | "
+            f"{e.pre_tokens/1000:.0f}→{e.post_tokens/1000:.0f} | {e.requests_observed} | "
+            f"{e.final_context_tokens/1000:.0f} | {regained} |"
+        )
+    lines += [
+        "", "### Cost: compacting vs. not, over the observed window", "",
+        "\"Reread\" and \"fed in\" both accumulate from this compact until the next compact (or session end).",
+        "Reread detection matches Read on file_path, Grep/Glob on path+pattern, and a regex over Bash",
+        "commands (cat/head/tail/rg/grep/type/Get-Content/Select-String) — offset, limit, and output flags",
+        "are ignored so a second read of the same target is still caught; tools outside this list, or Bash",
+        "reads outside the regex, are not detected and understate the true reread total. Reread tokens are",
+        "priced as a fresh cache write (not a plain read), because Claude Code writes essentially all new",
+        "context to cache each turn — compacting pays for the reset transcript write and the reread write.",
+        "\"Gross saved\" is the cache-read saving accumulated over the observed window if nothing else",
+        "changed; \"net saved\" subtracts the overhead. Negative net saved means compacting cost more than",
+        "it saved over this specific window (it may still break even later, see break-even column).",
+        "", "| Date | Reread (tok / $) | Fed in (k) | Overhead $ | Gross saved $ | Net saved $ | Break-even req | Verdict |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
+    ]
+    for e in sorted(usable_events, key=lambda e: parse_ts(e.timestamp)):
+        if e.requests_observed == 0 or not math.isfinite(e.break_even_requests):
+            verdict = "not yet measurable"
+        elif e.requests_observed >= e.break_even_requests:
+            verdict = "recovered"
+        else:
+            verdict = "not recovered"
+        lines.append(
+            f"| {e.timestamp[:10] or 'unknown'} | {e.reread_tokens_est:.0f} / {e.reread_cost_usd_est:.3f} | "
+            f"{e.tool_tokens_after_est/1000:.1f} | {e.compact_overhead_usd_est:.3f} | "
+            f"{e.gross_saved_usd_est:.3f} | {e.net_saved_usd_est:.3f} | {e.break_even_requests:.1f} | {verdict} |"
+        )
+    lines += ["", "## Price assumptions (USD/MTok, retrieved 2026-08-12)", "",
         "- Claude Sonnet 5 introductory: input 2.00, 5m write 2.50, 1h write 4.00, read 0.20, output 10.00 (through 2026-08-31).",
         "- Claude Opus 5: input 5.00, 5m write 6.25, 1h write 10.00, read 0.50, output 25.00.",
         "- GPT-5.6 Sol: input 5.00, cached input 0.50, output 30.00; cache-write estimate is editable and set to 1.25x input.",
@@ -611,7 +696,7 @@ def render_report(out: Path, requests: list[Request], compacts: list[Compact], s
         "| Context size | observed | Claude: input + cache creation + cache read; Codex: total input |",
         "| Compact pre/post full context | observed | last request before / first request after |",
         "| Claude compact payload | observed | compactMetadata.postTokens; excludes reinjected fixed context |",
-        "| Compact summarization usage | unknown | absent from ordinary and cumulative usage logs |",
+        "| Compact summarization usage | unknown, default assumed cache-hit | never logged directly; assumption favored by compactMetadata.durationMs (a real multi-minute call) and preCompactDiscoveredTools matching the session's own tool set, but not confirmed by a usage record |",
         "| Compact summary tokens | estimated range | Claude: 0.5–1.0 × postTokens; Codex: replacement text at 3–5 chars/token |",
         "| Tool-result carry-in | estimated | positive context delta minus previous model output |",
         "| Re-read tokens | estimated (Claude only) | repeated read-like tool arguments, allocated by result character share |",
