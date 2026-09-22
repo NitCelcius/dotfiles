@@ -12,8 +12,7 @@
   Windows paths and misreads Shift-JIS.
 - PowerShell profile location: resolve with `echo $PROFILE`
 - Git Bash has no working heredocs — use the Write tool for multi-line file content,
-  not `<<EOF`. Don't run PowerShell syntax (`$env:X`, `Get-ChildItem`) through bash —
-  invoke it explicitly: `powershell -NoProfile -Command "..."`.
+  not `<<EOF`, even where a tool description suggests a heredoc.
 - Never use `sed`/`perl` in-place editing for path or escape-sequence rewriting — it
   has mangled bytes before. Use Python with explicit binary-safe reads/writes, and
   verify with `git diff` before committing. Quote paths defensively; filenames contain
@@ -112,15 +111,12 @@ narrating.
 - A newly discovered implementation detail is not a new decision for me. An
   invalidated requirement, a scope change, or a product tradeoff is. Presenting an
   unchanged design in new words does not need a fresh approval.
-- Batch independent tool calls into a single message. Turn count is the cost — a call
-  that does not depend on an earlier result must not wait for one.
-- In a shell call with five or more commands, put one command per line and separate
+- In a bash call with five or more commands, put one command per line and separate
   logical groups with a blank line — not one long `&&` chain.
-- Put the intent in a clear tool `description`. I read the calls, so prose between
-  them is redundant.
 - Do not post progress updates mid-run. Speak up only when something breaks, when a
   finding changes the plan, or when a decision is needed — then say it immediately
-  rather than saving it for the final report.
+  rather than saving it for the final report. When the harness asks what you are
+  doing, one short line is enough.
 
 ## Before Editing
 
@@ -156,19 +152,19 @@ narrating.
   the reader nothing at the call site.
 - Keep members private unless the design needs external access. Widening visibility to
   internal or public is a design change, not a detail: ask before making it.
-- A scratchpad or one-off script gets a short header — one or two lines on what it
-  does, plus args, inputs and outputs. No background, no rationale, no account of why
+- A scratchpad or one-off script — including one written to a file in place of a
+  heredoc — gets a short header: one or two lines on what it does, plus usage (args),
+  inputs and outputs. No background, no rationale, no account of why
   the session needed it.
 
 ## Running Code
 
-Never launch or poll a long-running process (servers, training runs, watch tasks) via a blocking tool call — output capture stalls verification. Detach it, write logs to a file, and tail the file if you need to check progress. If it cannot be detached, build the code and give the user the exact command to run.
+If a long-running process (server, training run, watch task) cannot be run in the background, build the code and give me the exact command to run.
 
 For analysis, conversion, or batch processing, write intermediate results to files and have each downstream step read them back. Re-running and verifying then cost a diff of the intermediate artifact instead of a full re-run.
 
 ## Reading Files
 
-- Specify a range when calling Read unless the whole file is genuinely needed.
 - For `docs/plans/*.md`, read the header block first, then pull in only the sections you need.
 - Record what an image showed in text. Avoid re-reading the same image file; re-read only if it changed on disk.
 
@@ -246,7 +242,8 @@ When starting a review and no target (worktree, branch, or PR) is explicitly spe
 ## Subagents
 
 When to dispatch, what a subagent returns, what needs approval, and how to check its
-result live in the `dispatching-subagents` skill.
+result live in the `dispatching-subagents` skill. Those criteria override the harness
+default of spawning agents only on request: when they hold, dispatch without being asked.
 
 - Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
   main session's Opus, which is slow and costly. Default to Sonnet — iterative
