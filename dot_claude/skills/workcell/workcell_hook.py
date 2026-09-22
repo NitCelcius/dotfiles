@@ -21,6 +21,9 @@ SCHEMA = "workcell/event@1"
 ISOLATION_CWD_TOOLS = {"Bash", "PowerShell", "Monitor"}
 ISOLATION_PATH_TOOLS = {"Edit", "Write", "NotebookEdit"}
 
+# Only the executor declares isolation: worktree; the advisor runs in the main checkout.
+EXECUTOR_ROLE = "team-executor"
+
 
 def root_dir() -> Path:
     value = os.environ.get("WORKCELL_ROOT")
@@ -161,6 +164,20 @@ def isolation_target_dir(payload: dict[str, Any]) -> Path | None:
     return None
 
 
+def agent_role(payload: dict[str, Any]) -> str:
+    """agent_type without a plugin namespace: "workcell:team-executor" -> "team-executor"."""
+    return str(payload.get("agent_type", "")).rpartition(":")[2]
+
+
+def nearest_existing_dir(path: Path) -> Path | None:
+    """`path` or its closest existing ancestor, so a write into a directory that does
+    not exist yet is still checked against the checkout it would land in."""
+    for candidate in (path, *path.parents):
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def git_dirs(path: Path) -> tuple[Path, Path] | None:
     """Resolved (git-dir, git-common-dir) for `path`, or None if it isn't a git checkout."""
     try:
@@ -183,7 +200,7 @@ def git_dirs(path: Path) -> tuple[Path, Path] | None:
 
 
 def enforce_isolation(payload: dict[str, Any], root: Path) -> int:
-    """Deny a team-* agent's tool call when it targets the main checkout instead of
+    """Deny a team-executor's tool call when it targets the main checkout instead of
     its isolated worktree.
 
     Backstop for isolation: "worktree" silently not taking effect (the agent's own
@@ -194,10 +211,11 @@ def enforce_isolation(payload: dict[str, Any], root: Path) -> int:
     """
     if payload.get("hook_event_name") != "PreToolUse":
         return 0
-    if not str(payload.get("agent_type", "")).startswith("team-"):
+    if agent_role(payload) != EXECUTOR_ROLE:
         return 0
-    path = isolation_target_dir(payload)
-    if path is None or not path.is_dir():
+    target = isolation_target_dir(payload)
+    path = nearest_existing_dir(target) if target is not None else None
+    if path is None:
         return 0
     dirs = git_dirs(path)
     if dirs is None:
