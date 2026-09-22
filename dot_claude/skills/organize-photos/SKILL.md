@@ -23,7 +23,7 @@ Two PowerShell scripts, run in order, that live in the
 
 The archive password comes from a Bitwarden item via the `bwbio` CLI (Windows
 Hello-gated), not an interactive `Read-Host`. Bitwarden item id for this
-pipeline (local-only, fine to keep here): `b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc`.
+pipeline: `b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc`.
 
 ## Procedure
 
@@ -57,7 +57,7 @@ pipeline (local-only, fine to keep here): `b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc`
    local variable — never `Write-Host` it, never let it appear in a command
    you echo back:
    ```powershell
-   $Password = (bwbio get item b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc | ConvertFrom-Json).login.password
+   $Password = (bwbio get password b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc)
    if ([string]::IsNullOrEmpty($Password)) {
      Write-Host "ABORT: password retrieval failed (empty). Ask the user to retry the Windows Hello prompt."
    } else {
@@ -71,11 +71,11 @@ pipeline (local-only, fine to keep here): `b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc`
    errors or `$Password` comes back empty), just retry the fetch once; don't
    loop on it repeatedly.
 
-7. **Verify the archives against disk**, not just each archive's own
+6. **Verify the archives against disk**, not just each archive's own
    "Everything is Ok" line — re-fetch the password once, then test all of
    them in one pass:
    ```powershell
-   $Password = (bwbio get item b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc | ConvertFrom-Json).login.password
+   $Password = (bwbio get password b370ad8e-8739-4ba5-8f9f-b21e00f4e9bc)
    $archives = Get-ChildItem <ArchiveOut> -Filter *.7z
    $failures = @()
    foreach ($a in $archives) {
