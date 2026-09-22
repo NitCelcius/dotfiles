@@ -126,6 +126,66 @@ class WorkcellHookTest(unittest.TestCase):
         self.invoke(payload)
         self.assertEqual(archive.read_text(encoding="utf-8"), "one\ntwo\n")
 
+    def make_checkouts(self) -> tuple[Path, Path]:
+        """A main checkout and a linked worktree, both with spaces in their paths."""
+        main = self.base / "main repo"
+        linked = self.base / "linked tree"
+        main.mkdir()
+        git = ["git", "-C", str(main), "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+        subprocess.run([*git, "init", "-q"], check=True)
+        subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+        subprocess.run([*git, "worktree", "add", "-q", "--detach", str(linked)], check=True)
+        return main, linked
+
+    def isolation_call(self, agent_type: str, tool_name: str, target: Path) -> subprocess.CompletedProcess[str]:
+        payload = {
+            "session_id": "s4",
+            "hook_event_name": "PreToolUse",
+            "agent_type": agent_type,
+            "tool_name": tool_name,
+        }
+        if tool_name == "Bash":
+            payload["cwd"] = str(target)
+            payload["tool_input"] = {"command": "git status"}
+        else:
+            payload["cwd"] = str(target.parent)
+            payload["tool_input"] = {"file_path": str(target)}
+        return self.invoke(payload)
+
+    def test_executor_write_into_missing_directory_of_main_checkout_is_denied(self) -> None:
+        main, _ = self.make_checkouts()
+        result = self.isolation_call("team-executor", "Write", main / "new dir" / "nested" / "x.py")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('"deny"', result.stdout)
+
+    def test_executor_write_into_main_checkout_is_denied(self) -> None:
+        main, _ = self.make_checkouts()
+        self.assertEqual(self.isolation_call("team-executor", "Write", main / "x.py").returncode, 2)
+
+    def test_namespaced_executor_is_checked(self) -> None:
+        main, _ = self.make_checkouts()
+        self.assertEqual(self.isolation_call("workcell:team-executor", "Write", main / "x.py").returncode, 2)
+
+    def test_executor_write_into_missing_directory_of_linked_worktree_is_allowed(self) -> None:
+        _, linked = self.make_checkouts()
+        result = self.isolation_call("team-executor", "Write", linked / "new dir" / "x.py")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+
+    def test_advisor_in_main_checkout_is_not_isolation_checked(self) -> None:
+        main, _ = self.make_checkouts()
+        self.assertEqual(self.isolation_call("team-advisor", "Bash", main).returncode, 0)
+        self.assertEqual(self.isolation_call("workcell:team-advisor", "Bash", main).returncode, 0)
+
+    def test_unrelated_agent_in_main_checkout_is_allowed(self) -> None:
+        main, _ = self.make_checkouts()
+        self.assertEqual(self.isolation_call("general-purpose", "Write", main / "x.py").returncode, 0)
+
+    def test_executor_outside_any_checkout_is_allowed(self) -> None:
+        outside = self.base / "not a repo"
+        outside.mkdir()
+        self.assertEqual(self.isolation_call("team-executor", "Write", outside / "x.py").returncode, 0)
+
     def test_hook_fails_open_on_invalid_json(self) -> None:
         result = subprocess.run(
             [os.environ.get("PYTHON", "python"), str(HOOK)],

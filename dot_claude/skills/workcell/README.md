@@ -60,6 +60,9 @@ rule to your own `CLAUDE.md`:
 - Executor worktrees are fresh checkouts and do not carry gitignored files. Projects
   that need them require a `.worktreeinclude`.
 - `team-advisor` is denied the edit tools but can still run shell commands.
+- The `PreToolUse` isolation guard is a backstop for `team-executor` only. It denies
+  calls that resolve to a main checkout; it does not prove the executor is in the
+  worktree assigned to its task, and it is not a shell sandbox.
 - `SubagentStop.agent_transcript_path` is undocumented. Subagent transcript archiving
   depends on it and may break without notice.
 
