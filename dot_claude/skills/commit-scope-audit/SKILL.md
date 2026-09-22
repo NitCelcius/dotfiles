@@ -35,7 +35,7 @@ multi-commit split, approved.
    for approval before running any `git add`/`git commit`.
 5. After each commit, run `git show --stat` and confirm the file list matches the
    plan. If it doesn't, stop and report — don't amend silently to fix it.
-6. Apply the repo's signing fallback rule as-is (see CLAUDE.md "SSH signing
+6. Apply the repo's signing fallback rule as-is (see the `git-workflow` skill, "SSH signing
    fallback") — this skill governs scope, not signing.
 
 ## Don't

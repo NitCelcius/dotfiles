@@ -39,7 +39,8 @@ Look for patterns like:
 - `wip/` prefix
 - Date suffix `YYMMDD`
 
-If CLAUDE.md doesn't specify, examine recent branches:
+If the project CLAUDE.md doesn't specify, use the global convention in the
+`git-workflow` skill ("Branch naming"). If neither applies, examine recent branches:
 
 ```bash
 git branch -r --sort=-committerdate | head -5
