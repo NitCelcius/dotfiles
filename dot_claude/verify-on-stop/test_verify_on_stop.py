@@ -207,6 +207,31 @@ def test_changed_placeholder_skips_the_command_when_only_a_nonmatching_file_is_d
     assert args_log.read_text(encoding="utf-8") == before
 
 
+def test_root_and_nested_checks_are_cached_separately(repo: Path, data_root: Path, tmp_path: Path) -> None:
+    # Markers live outside the checkout so running a check does not change the tree.
+    sub = repo / "sub"
+    sub.mkdir()
+    root_marker, sub_marker = tmp_path / "root.log", tmp_path / "sub.log"
+    write_block(repo, counting_command(root_marker))
+    write_block(sub, counting_command(sub_marker))
+    for _ in range(2):
+        assert fire(repo, data_root).returncode == verify_on_stop.EXIT_ALLOW_STOP
+        assert fire(sub, data_root).returncode == verify_on_stop.EXIT_ALLOW_STOP
+    assert run_count(root_marker) == 1
+    assert run_count(sub_marker) == 1
+
+
+def test_failure_in_one_scope_does_not_suppress_another(repo: Path, data_root: Path, tmp_path: Path) -> None:
+    sub = repo / "sub"
+    sub.mkdir()
+    root_marker = tmp_path / "root.log"
+    write_block(repo, counting_command(root_marker))
+    write_block(sub, FAILING_COMMAND)
+    assert fire(sub, data_root).returncode == verify_on_stop.EXIT_BLOCK_STOP
+    assert fire(repo, data_root).returncode == verify_on_stop.EXIT_ALLOW_STOP
+    assert run_count(root_marker) == 1
+
+
 def test_not_a_git_repo_allows_stop(tmp_path: Path, data_root: Path) -> None:
     bare = tmp_path / "notrepo"
     bare.mkdir()
