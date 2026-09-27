@@ -5,6 +5,9 @@
 {{- /*   hooks.Stop        — runs the project's quick verification, and      */ -}}
 {{- /*                       exits 2 to keep Claude from closing on a claim  */ -}}
 {{- /*   hooks.SessionStart — flags a pending diff, commit ask at 300+      */ -}}
+{{- /*   hooks.PermissionRequest, PreToolUse, Stop (play-sound.sh) — sound   */ -}}
+{{- /*                       cues for permission prompts, AskUserQuestion,  */ -}}
+{{- /*                       and task completion                            */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
@@ -79,6 +82,27 @@
 {{-   if not (contains "session_start_diff.py" (toJson .)) -}}{{- $keptStart = append $keptStart . -}}{{- end -}}
 {{- end -}}
 {{- $cfg = setValueAtPath "hooks.SessionStart" (append $keptStart (dict "hooks" (list $startHook))) $cfg -}}
+{{- /* Sound-effect hooks. Hardcoded here (not left to a live-file merge) so a */ -}}
+{{- /* fresh machine gets them too, not just one where they were hand-added.   */ -}}
+{{- $soundCmd := "~/.claude/hooks/play-sound.sh" -}}
+{{- $permHook := dict "matcher" "" "hooks" (list (dict "type" "command" "command" (printf "%s permission" $soundCmd))) -}}
+{{- $keptPerm := list -}}
+{{- range default (list) (dig "hooks" "PermissionRequest" (list) $cfg) -}}
+{{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptPerm = append $keptPerm . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.PermissionRequest" (append $keptPerm $permHook) $cfg -}}
+{{- $questionHook := dict "matcher" "AskUserQuestion" "hooks" (list (dict "type" "command" "command" (printf "%s question" $soundCmd))) -}}
+{{- $keptPreToolUse := list -}}
+{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
+{{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptPreToolUse = append $keptPreToolUse . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptPreToolUse $questionHook) $cfg -}}
+{{- $completeHook := dict "matcher" "" "hooks" (list (dict "type" "command" "command" (printf "%s complete" $soundCmd))) -}}
+{{- $keptStopSound := list -}}
+{{- range default (list) (dig "hooks" "Stop" (list) $cfg) -}}
+{{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptStopSound = append $keptStopSound . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.Stop" (prepend $keptStopSound $completeHook) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
