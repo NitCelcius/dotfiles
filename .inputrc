@@ -1,0 +1,8 @@
+$include /etc/inputrc
+
+# Ctrl+Backspace: delete word left
+"\C-h": backward-kill-word
+
+# Alt+Backspace: delete to start of line (like macOS Cmd+Backspace)
+"\e\C-?": unix-line-discard
+"\e\C-h": unix-line-discard
