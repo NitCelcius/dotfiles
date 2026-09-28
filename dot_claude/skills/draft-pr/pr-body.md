@@ -12,7 +12,10 @@ Leave out:
 - lines only true of the author's machine — "not verified on this machine",
   deployed-home-directory state, backups taken locally
 - verification that only restates the diff (e.g. "settings.json differs only by the
-  new key")
+  new key", "chezmoi diff shows the new field present") — a reader with the diff open
+  already sees this
+- a check CI already runs on this PR (the test suite, lint) — CI's own status is the
+  record of it, not the body
 - checks of local state (`.trash`, `chezmoi status`, the session's skill list)
 - commit signing state (signed or not) — signing is reconciled with the user in chat
 
@@ -24,7 +27,8 @@ If something local still matters, tell the user in chat instead.
 - Title: a conventional commit, confirmed with the user before `gh pr create`.
 - `## Summary` — one or two sentences.
 - `## Changes` — one bullet per change, file paths in backticks.
-- `## Verification` — only repeatable checks.
+- `## Verification` — only repeatable checks that aren't already covered by CI or
+  obvious from the diff. Omit the heading when nothing survives that filter.
 - `## Not in this PR` — what is deliberately left for later PRs. Omit when empty.
 - Then the attribution lines from the session's system reminder.
 
