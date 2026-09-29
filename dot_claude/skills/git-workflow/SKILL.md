@@ -32,6 +32,19 @@ Rebase & fast-forward merge. Not squash merge.
 GitHub does not sign commits merged this way — the branch commits land on `main` as-is,
 keeping their original signature state.
 
+## Reporting whether a branch is merged
+GitHub's rebase & merge rewrites commits, so `git branch --merged` can call a merged
+branch unmerged. Check in this order:
+1. `git fetch origin`
+2. `gh pr list --state merged --head <branch>` (bare branch name, no `origin/`). A hit
+   means a PR from that branch merged, not that every commit on the branch did.
+3. `git cherry -v origin/main <branch>`. Lines starting with `-` are already on main by
+   content; any line starting with `+` is not, so the branch is not fully merged. A
+   commit edited while rebasing (e.g. conflict resolution) shows `+` although its PR
+   merged: look for its subject with `git log origin/main --grep`.
+
+`git branch -r --merged origin/main` proves merged only; its absence proves nothing.
+
 ## SSH signing fallback
 If the signing agent is unavailable mid-commit, retry with `--no-gpg-sign` immediately.
 Do not ask, do not investigate the cause — an unsigned WIP commit is never worth
