@@ -2,15 +2,19 @@
 
 Run: uv run --with pytest pytest dot_claude/rm-junction-guard
 
-Covers: silent on non-delete commands, `git rm`, plain directories and malformed
-input; `ask` when the target is a junction, holds a junction, is pointed at by a
-junction, or is mentioned by a shim script. Windows only (junctions via mklink /J).
+Covers: `ask` for each delete form that reaches through a junction (trailing separator,
+glob or subpath under the link, cmd `del /s`, an enumerator piped into a delete, a
+quoted multi-statement script); silence for deleting a link by name, a folder holding a
+link, non-delete commands and malformed input. Also runs the real delete tools once to
+confirm that deleting a junction by name keeps its target, which the silence relies on.
+Windows only (junctions via mklink /J).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -30,24 +34,20 @@ def make_junction(link: Path, target: Path) -> None:
     )
 
 
-def run_raw(stdin: str, home: Path) -> str:
-    # Point every search root the hook reads at an empty home so the run is hermetic.
-    env = {k: v for k, v in os.environ.items() if k != "PNPM_HOME"}
-    env.update(HOME=str(home), USERPROFILE=str(home), LOCALAPPDATA=str(home))
+def run_raw(stdin: str) -> str:
     done = subprocess.run(
         [sys.executable, str(HOOK)],
         input=stdin,
         capture_output=True,
         text=True,
         check=True,
-        env=env,
     )
     return done.stdout.strip()
 
 
-def fire(command: str, cwd: Path, home: Path, tool: str = "Bash") -> str:
+def fire(command: str, cwd: Path, tool: str = "Bash") -> str:
     payload = {"tool_name": tool, "tool_input": {"command": command}, "cwd": str(cwd)}
-    return run_raw(json.dumps(payload), home)
+    return run_raw(json.dumps(payload))
 
 
 def decision(out: str) -> dict:
@@ -55,97 +55,91 @@ def decision(out: str) -> dict:
 
 
 @pytest.fixture
-def home(tmp_path: Path) -> Path:
-    path = tmp_path / "home"
-    path.mkdir()
-    return path
-
-
-@pytest.fixture
 def work(tmp_path: Path) -> Path:
-    path = tmp_path / "work"
-    path.mkdir()
-    return path
+    """work/real holds files; work/link and work/holder/inner are junctions to it."""
+    real = tmp_path / "real"
+    (real / "sub").mkdir(parents=True)
+    (real / "keep.txt").write_text("x", encoding="utf-8")
+    (real / "sub" / "deep.txt").write_text("x", encoding="utf-8")
+    make_junction(tmp_path / "link", real)
+    (tmp_path / "holder").mkdir()
+    make_junction(tmp_path / "holder" / "inner", real)
+    (tmp_path / "plain").mkdir()
+    return tmp_path
 
 
-def test_non_delete_command_is_silent(work: Path, home: Path) -> None:
-    (work / "d").mkdir()
-    assert fire("ls d", work, home) == ""
-
-
-def test_git_rm_is_silent(work: Path, home: Path) -> None:
-    target = work / "d"
-    target.mkdir()
-    make_junction(work / "link", target)
-    assert fire("git rm -r d", work, home) == ""
-
-
-def test_plain_directory_is_silent(work: Path, home: Path) -> None:
-    (work / "plain").mkdir()
-    (work / "plain" / "f.txt").write_text("x", encoding="utf-8")
-    assert fire("rm -rf plain", work, home) == ""
-
-
-def test_junction_target_asks(work: Path, home: Path) -> None:
-    real = work / "real"
-    real.mkdir()
-    make_junction(work / "link", real)
-    out = decision(fire("rm -rf link", work, home))
+@pytest.mark.parametrize(
+    ("command", "tool"),
+    [
+        ("rm -rf link/", "Bash"),
+        ("rm -rf link/*", "Bash"),
+        ("rm -rf link/sub", "Bash"),
+        ("rm -rf holder/inner/*", "Bash"),
+        ("rm -rf plain && rm -rf link/", "Bash"),
+        ("find link -type f | xargs rm -f", "Bash"),
+        ("cmd /c del /s /q link", "Bash"),
+        ('cmd /c "erase /q link"', "Bash"),
+        ("Remove-Item link\\* -Recurse -Force", "PowerShell"),
+        ("Get-ChildItem link -Recurse -File | Remove-Item -Force", "PowerShell"),
+        ("gci link | ForEach-Object { Remove-Item $_ -Recurse }", "PowerShell"),
+        ('powershell -c "Remove-Item plain; Remove-Item link\\*"', "Bash"),
+    ],
+)
+def test_delete_through_junction_asks(work: Path, command: str, tool: str) -> None:
+    out = decision(fire(command, work, tool))
     assert out["hookEventName"] == "PreToolUse"
     assert out["permissionDecision"] == "ask"
-    assert "itself a junction" in out["permissionDecisionReason"]
+    assert "junction" in out["permissionDecisionReason"]
+    assert str(work / "real") in out["permissionDecisionReason"]
 
 
-def test_powershell_remove_item_on_junction_asks(work: Path, home: Path) -> None:
-    real = work / "real"
-    real.mkdir()
-    make_junction(work / "link", real)
-    out = decision(fire("Remove-Item -Recurse -Force link", work, home, tool="PowerShell"))
-    assert out["permissionDecision"] == "ask"
-
-
-def test_directory_containing_junction_asks(work: Path, home: Path) -> None:
-    outside = work / "outside"
-    outside.mkdir()
-    holder = work / "holder"
-    holder.mkdir()
-    make_junction(holder / "inner", outside)
-    out = decision(fire("rm -rf holder", work, home))
-    assert out["permissionDecision"] == "ask"
-    assert "contains a junction" in out["permissionDecisionReason"]
-
-
-def test_directory_pointed_at_by_junction_asks(work: Path, home: Path) -> None:
-    target = work / "store"
-    target.mkdir()
-    (work / "elsewhere").mkdir()
-    make_junction(work / "elsewhere" / "link", target)
-    out = decision(fire("rm -rf store", work, home))
-    assert out["permissionDecision"] == "ask"
-    assert "points into" in out["permissionDecisionReason"]
-
-
-def test_directory_referenced_by_shim_asks(work: Path, home: Path) -> None:
-    target = work / "pkg"
-    target.mkdir()
-    (work / "tool.cmd").write_text(f'@"{target}\\bin\\tool.js" %*\n', encoding="utf-8")
-    out = decision(fire("rm -rf pkg", work, home))
-    assert out["permissionDecision"] == "ask"
-    assert "tool.cmd" in out["permissionDecisionReason"]
-
-
-def test_shim_with_relative_reference_asks(work: Path, home: Path) -> None:
-    target = work / "pkg"
-    target.mkdir()
-    (work / "tool").write_text('exec node "$basedir/pkg/bin/tool.js" "$@"\n', encoding="utf-8")
-    out = decision(fire("rm -rf pkg", work, home))
-    assert out["permissionDecision"] == "ask"
+@pytest.mark.parametrize(
+    ("command", "tool"),
+    [
+        ("rm -rf link", "Bash"),
+        ("rm -rf holder", "Bash"),
+        ("rm -rf plain/", "Bash"),
+        ("rmdir link", "Bash"),
+        ("cmd /c rd /s /q link", "Bash"),
+        ("Remove-Item -Recurse -Force link", "PowerShell"),
+        ("Get-Item link | Remove-Item -Recurse -Force", "PowerShell"),
+        ("git rm -r link/", "Bash"),
+        ("grep -r rd link/", "Bash"),
+        ("echo del link/", "Bash"),
+        ("ls link/", "Bash"),
+        ("rm -rf does-not-exist/ $UNSET_VAR/x", "Bash"),
+    ],
+)
+def test_delete_not_through_junction_is_silent(work: Path, command: str, tool: str) -> None:
+    assert fire(command, work, tool) == ""
 
 
 @pytest.mark.parametrize("stdin", ["", "not json", "[]", '{"tool_input": {}}', '{"tool_input": {"command": 3}}'])
-def test_malformed_stdin_is_silent(stdin: str, home: Path) -> None:
-    assert run_raw(stdin, home) == ""
+def test_malformed_stdin_is_silent(stdin: str) -> None:
+    assert run_raw(stdin) == ""
 
 
-def test_unresolvable_target_is_silent(work: Path, home: Path) -> None:
-    assert fire("rm -rf does-not-exist $UNSET_VAR/x", work, home) == ""
+def _tool(name: str, *argv: str) -> list[str] | None:
+    path = shutil.which(name)
+    return [path, *argv] if path else None
+
+
+# The hook stays silent on deleting a link by name because these tools remove only the
+# link. Recheck that here so a tool that starts following junctions fails loudly.
+DELETE_BY_NAME = {
+    "rm -rf": lambda: _tool("rm", "-rf", "link"),
+    "pwsh Remove-Item -Recurse": lambda: _tool("pwsh", "-NoProfile", "-NonInteractive", "-Command", "Remove-Item -Recurse -Force link"),
+    "powershell Remove-Item -Recurse": lambda: _tool("powershell", "-NoProfile", "-NonInteractive", "-Command", "Remove-Item -Recurse -Force link"),
+    "cmd rd /s /q": lambda: ["cmd", "/c", "rd /s /q link"],
+}
+
+
+@pytest.mark.parametrize("name", list(DELETE_BY_NAME))
+def test_deleting_junction_by_name_keeps_target(work: Path, name: str) -> None:
+    argv = DELETE_BY_NAME[name]()
+    if argv is None:
+        pytest.skip(f"{name.split()[0]} not on PATH")
+    subprocess.run(argv, cwd=work, check=True, capture_output=True)
+    assert not os.path.lexists(work / "link")
+    assert (work / "real" / "keep.txt").exists()
+    assert (work / "real" / "sub" / "deep.txt").exists()
