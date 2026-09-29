@@ -3,6 +3,8 @@
 chezmoi source for the home directory. Global Claude Code instructions live in
 `dot_claude/CLAUDE.md`; this file only covers working on the repo itself.
 
+Load the `modifying-dotfiles` skill before changing any config in this repo.
+
 ## Verification
 
 - **quick** (task close-out, aim for under 30s): `uv run --with pytest pytest -q`
