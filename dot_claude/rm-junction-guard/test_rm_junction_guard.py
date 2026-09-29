@@ -6,7 +6,9 @@ Covers: `ask` for each delete form that reaches through a junction (trailing sep
 glob or subpath under the link, cmd `del /s`, an enumerator piped into a delete, a
 quoted multi-statement script) and for a guarded name (`node_modules`, `.venv`) whose
 contents a global shim runs; silence for deleting a link by name, a folder holding a
-link, a project node_modules no shim runs, non-delete commands and malformed input.
+link, a project node_modules no shim runs, non-delete commands and malformed input;
+`deny` for a glob or emptying delete over a folder holding links, which
+`DELETE_IT_ANYWAY=1` turns into additionalContext.
 Also runs the real delete tools once to
 confirm that deleting a junction by name keeps its target, which the silence relies on.
 Windows only (junctions via mklink /J).
@@ -121,6 +123,56 @@ def test_delete_through_junction_asks(work: Path, command: str, tool: str) -> No
 )
 def test_delete_not_through_junction_is_silent(work: Path, command: str, tool: str) -> None:
     assert fire(command, work, tool) == ""
+
+
+def output(out: str) -> dict:
+    return json.loads(out)["hookSpecificOutput"] if out else {}
+
+
+@pytest.mark.parametrize(
+    ("command", "tool"),
+    [
+        ("rm -rf holder/*", "Bash"),
+        ("Remove-Item holder\\* -Recurse -Force", "PowerShell"),
+        ("cmd /c del /s /q holder", "Bash"),
+        ("gci holder | Remove-Item -Recurse -Force", "PowerShell"),
+        ("find holder -mindepth 1 | xargs rm -rf", "Bash"),
+        ('echo "DELETE_IT_ANYWAY=1"; rm -rf holder/*', "Bash"),
+    ],
+)
+def test_glob_or_empty_over_links_is_denied(work: Path, command: str, tool: str) -> None:
+    out = output(fire(command, work, tool))
+    assert out["permissionDecision"] == "deny"
+    assert "1 junctions/symlinks" in out["permissionDecisionReason"]
+    assert "inner" in out["permissionDecisionReason"]
+    assert "DELETE_IT_ANYWAY=1" in out["permissionDecisionReason"]
+
+
+@pytest.mark.parametrize(
+    ("command", "tool"),
+    [
+        ("DELETE_IT_ANYWAY=1 rm -rf holder/*", "Bash"),
+        ("$env:DELETE_IT_ANYWAY=1; Remove-Item holder\\* -Recurse -Force", "PowerShell"),
+        ("$env:DELETE_IT_ANYWAY = 1; gci holder | Remove-Item -Recurse", "PowerShell"),
+    ],
+)
+def test_override_runs_and_informs_claude(work: Path, command: str, tool: str) -> None:
+    out = output(fire(command, work, tool))
+    assert "permissionDecision" not in out
+    assert "inner" in out["additionalContext"]
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["rm -rf holder", "rm -rf plain/*", "cmd /c del /q holder", "rm -rf holder/*.txt"],
+)
+def test_glob_or_empty_without_links_is_silent(work: Path, command: str) -> None:
+    assert fire(command, work) == ""
+
+
+@pytest.mark.parametrize("command", ["DELETE_IT_ANYWAY=1 rm -rf link/*", "FOO=1 rm -rf link/"])
+def test_ask_outranks_caveat_and_override(work: Path, command: str) -> None:
+    assert output(fire(command, work))["permissionDecision"] == "ask"
 
 
 @pytest.fixture
