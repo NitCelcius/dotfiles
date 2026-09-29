@@ -1,0 +1,8 @@
+{{- /* WSL2 limits depend on the machine's RAM. A host missing from this table  */ -}}
+{{- /* renders an empty file, which chezmoi skips, so its own .wslconfig stays. */ -}}
+{{- $limits := dict "ICY-YOGA770" (dict "memory" "5GB" "swap" "8GB") -}}
+{{- with get $limits .chezmoi.hostname -}}
+[wsl2]
+memory={{ .memory }}
+swap={{ .swap }}
+{{ end -}}
