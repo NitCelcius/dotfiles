@@ -37,3 +37,9 @@ ci
 # chezmoi would otherwise deploy it.
 **/__pycache__
 obsidian
+
+# .wslconfig only means something on Windows; per-host limits live in
+# dot_wslconfig.tmpl.
+{{ if ne .chezmoi.os "windows" -}}
+.wslconfig
+{{ end -}}
