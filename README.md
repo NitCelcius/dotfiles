@@ -34,6 +34,7 @@ an edit to the deployed copy is reverted by the next apply.
 | `dot_claude/skills/` | Skills, including the Workcell plugin (`skills/workcell/`) |
 | `dot_claude/verify-on-stop/` | Stop hook that runs a project's `quick` verification |
 | `dot_claude/session-start-diff/` | SessionStart hook reporting uncommitted changes in the session's repo |
+| `dot_claude/rm-junction-guard/` | PreToolUse hook that asks before a delete that a junction or shim relies on |
 
 The `modifying-dotfiles` skill governs changes to this repo: branch first, edit the
 source, keep private detail out, and log the reason for each change in Notion.

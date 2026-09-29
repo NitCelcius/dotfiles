@@ -22,6 +22,7 @@
 # and a scratch directory are available; nothing needs it on a deployed machine.
 .claude/verify-on-stop/test_verify_on_stop.py
 .claude/session-start-diff/test_session_start_diff.py
+.claude/rm-junction-guard/test_rm_junction_guard.py
 
 # Project instructions and test config for working on this repo, not files for the
 # home directory.
