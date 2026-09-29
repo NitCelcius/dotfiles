@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Ask before a delete command reaches through a link or breaks a global shim.
+"""Ask before a delete command reaches through a link or breaks a global shim; deny a
+glob that deletes links until the command opts in.
 
 Wired as a PreToolUse hook (matcher `Bash|PowerShell`). Reads the hook payload on
 stdin for `tool_input.command` and `cwd`. A command with no delete verb (`rm`,
@@ -20,12 +21,21 @@ It also asks when the deleted path runs through a folder named `node_modules`, a
 store, `.venv` or `venv`, and a shim (.cmd, .ps1, .sh, extensionless) directly in
 PNPM_HOME, %LOCALAPPDATA%\\pnpm, %APPDATA%\\npm or ~/.local/bin names a path inside it.
 
+Either finding returns `ask`, so the user decides. Failing both, a delete that globs into
+a folder (`rm -rf node_modules/*`) or empties one (cmd `del /s`, `Get-ChildItem`/`find`
+piped into a delete) lists that folder's top level once. If a matching entry is a junction
+or symlink, it returns `deny` with a caveat Claude reads. The same command with
+`DELETE_IT_ANYWAY=1` set in it (`DELETE_IT_ANYWAY=1 rm ...`, `$env:DELETE_IT_ANYWAY=1; ...`)
+runs, and the caveat goes to Claude as additionalContext instead. Deleting the folder by
+name stays silent.
+
 Unparseable input or an unresolvable path prints nothing and exits 0: the guard never
 blocks on its own failure.
 """
 
 from __future__ import annotations
 
+import fnmatch
 import glob
 import json
 import os
@@ -52,6 +62,10 @@ SCRIPT_FLAG = re.compile(r"^-(?:l?c|com(?:m(?:a(?:n(?:d)?)?)?)?)$", re.I)  # bas
 CMD_SWITCH = re.compile(r"^/[a-zA-Z?](?::\S*)?$")
 GIT_BASH_DRIVE = re.compile(r"^/([a-zA-Z])(?:/|$)")
 GLOB_CHARS = re.compile(r"[*?\[]")
+ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")  # `NAME=value rm ...`
+OVERRIDE_VAR = "DELETE_IT_ANYWAY"
+OVERRIDE = re.compile(rf"(?:^|[\s;&|(])(?:\$env:)?{OVERRIDE_VAR}\s*=\s*['\"]?1(?!\w)", re.I)
+MAX_NAMED_LINKS = 5
 
 IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # junction
 MAX_GLOB_MATCHES = 50
@@ -70,6 +84,7 @@ Command = list[Word]
 class Reach(Enum):
     ENTRY = "entry"  # the named path itself goes; a link there is removed as a link
     CONTENTS = "contents"  # what is inside the named path goes, so a link there is followed
+    EMPTIES = "empties"  # as CONTENTS, and every entry directly inside is deleted too
 
 
 def link_kind(path: str) -> str | None:
@@ -130,8 +145,14 @@ def rejoin(words: Command) -> str:
 
 
 def unwrap(words: Command, under_cmd: bool) -> tuple[str, Command, str | None, bool]:
-    """(verb, args, nested script, under_cmd) after dropping `sudo`, `xargs -0` and the like."""
-    while words and verb_of(words[0][1]) in WRAPPERS:
+    """(verb, args, nested script, under_cmd) after dropping `sudo`, `xargs -0`, `X=1` and the like."""
+    while words:
+        quoted, text = words[0]
+        if not quoted and ASSIGNMENT.match(text):
+            words = words[1:]
+            continue
+        if verb_of(text) not in WRAPPERS:
+            break
         words = words[1:]
         while words and (words[0][1].startswith("-") or "=" in words[0][1]):
             words = words[1:]
@@ -171,9 +192,12 @@ def has_trailing_separator(raw: str) -> bool:
 
 def delete_operands(verb: str, args: Command, under_cmd: bool) -> list[tuple[str, Reach]]:
     switches = verb in CMD_SWITCH_VERBS or (under_cmd and verb == "rmdir")
-    empties = under_cmd and verb in CMD_CONTENT_VERBS
+    if under_cmd and verb in CMD_CONTENT_VERBS:
+        recursive = any(not quoted and text.lower() == "/s" for quoted, text in args)
+        reach = Reach.EMPTIES if recursive else Reach.CONTENTS
+        return [(raw, reach) for raw in positional(args, switches)]
     return [
-        (raw, Reach.CONTENTS if empties or has_trailing_separator(raw) else Reach.ENTRY)
+        (raw, Reach.CONTENTS if has_trailing_separator(raw) else Reach.ENTRY)
         for raw in positional(args, switches)
     ]
 
@@ -208,7 +232,7 @@ def operands(command: str, under_cmd: bool = False) -> list[tuple[str, Reach]]:
                 elif verb in ENUMERATORS:
                     sources.extend((index, path) for path in enumerated_paths(verb, args))
         # A delete fed by an enumerator removes what the enumerator listed inside its path.
-        found.extend((path, Reach.CONTENTS) for index, path in sources if index < last_delete_stage)
+        found.extend((path, Reach.EMPTIES) for index, path in sources if index < last_delete_stage)
     return found
 
 
@@ -332,6 +356,52 @@ def references(raw: str, reach: Reach, cwd: str, shims: list[tuple[str, str]] | 
     return lines, shims
 
 
+def emptied_folder(raw: str, reach: Reach, cwd: str) -> tuple[str, str] | None:
+    """(folder, entry pattern) when the delete takes every matching entry directly inside a folder."""
+    path = expand(raw)
+    if path is None:
+        return None
+    full = os.path.normpath(os.path.join(cwd, path))
+    if reach is Reach.EMPTIES:
+        return (full, "*") if not GLOB_CHARS.search(full) and os.path.isdir(full) else None
+    folder, pattern = os.path.split(full)
+    if GLOB_CHARS.search(pattern) and not GLOB_CHARS.search(folder) and os.path.isdir(folder):
+        return folder, pattern
+    return None
+
+
+def linked_entries(folder: str, pattern: str) -> list[str]:
+    """Names of junctions and symlinks directly inside folder that match pattern (one scandir)."""
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return []
+    return [entry.name for entry in entries if fnmatch.fnmatch(entry.name, pattern) and link_kind(entry.path)]
+
+
+def caveats(command: str, cwd: str) -> list[tuple[str, list[str]]]:
+    """(operand, link names) for each glob or emptying delete whose folder holds links."""
+    found: list[tuple[str, list[str]]] = []
+    for raw, reach in operands(command):
+        target = emptied_folder(raw, reach, cwd)
+        links = linked_entries(*target) if target else []
+        if links:
+            found.append((raw, links))
+    return found
+
+
+def caveat_lines(found: list[tuple[str, list[str]]]) -> str:
+    lines = []
+    for raw, links in found:
+        named = ", ".join(links[:MAX_NAMED_LINKS]) + (", ..." if len(links) > MAX_NAMED_LINKS else "")
+        lines.append(f"`{raw}` deletes {len(links)} junctions/symlinks by listing their folder: {named}")
+    return "\n".join(lines)
+
+
+def emit(output: dict[str, str]) -> None:
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", **output}}))
+
+
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -348,23 +418,28 @@ def main() -> int:
         for raw, reach in operands(command):
             lines, shims = references(raw, reach, cwd, shims)
             refs.extend(line for line in lines if line not in refs)
+        found = [] if refs else caveats(command, cwd)
     except OSError:
         return 0
-    if not refs:
+    if refs:
+        reason = "This delete removes more than the path it names:\n- " + "\n- ".join(refs[:MAX_REFS])
+        emit({"permissionDecision": "ask", "permissionDecisionReason": reason})
+        return 0
+    if not found:
         return 0
 
-    reason = "This delete removes more than the path it names:\n- "
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "ask",
-                    "permissionDecisionReason": reason + "\n- ".join(refs[:MAX_REFS]),
-                }
-            }
-        )
+    if OVERRIDE.search(command):
+        note = f"{OVERRIDE_VAR}=1 was set, so this ran:\n{caveat_lines(found)}\nCheck the links' targets still exist."
+        emit({"additionalContext": note})
+        return 0
+    reason = (
+        f"{caveat_lines(found)}\n"
+        "rm and Remove-Item removed only the links in testing (junctions, PowerShell 5.1.26100 and "
+        "7.6.6), but symlinks and older PowerShell may follow them. Delete the folder by name "
+        f"instead, or if this is intended, rerun with {OVERRIDE_VAR}=1: "
+        f"`{OVERRIDE_VAR}=1 <command>` in Bash, `$env:{OVERRIDE_VAR}=1; <command>` in PowerShell."
     )
+    emit({"permissionDecision": "deny", "permissionDecisionReason": reason})
     return 0
 
 
