@@ -9,6 +9,7 @@
 {{- /*                       cues for permission prompts, AskUserQuestion,  */ -}}
 {{- /*                       and task completion                            */ -}}
 {{- /*   hooks.PreToolUse   — asks before a delete a shim relies on         */ -}}
+{{- /*   hooks.PreToolUse   — asks before a delete through a link           */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}

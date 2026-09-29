@@ -1,106 +1,75 @@
 #!/usr/bin/env python3
-"""Ask before a delete command removes something that junctions or shims depend on.
+"""Ask before a delete command reaches through a junction or symlink into its target.
 
 Wired as a PreToolUse hook (matcher `Bash|PowerShell`). Reads the hook payload on
 stdin for `tool_input.command` and `cwd`. A command with no delete verb (`rm`,
-`rmdir`, `Remove-Item`, `del`, `erase`, `ri`, `rd`; `git rm` excluded) exits at once
-with no output. For a delete verb, each target path is resolved against `cwd` and
-checked for:
+`rmdir`, `Remove-Item`, `del`, `erase`, `ri`, `rd`) exits at once with no output.
 
-  - the target is itself a junction or symlink
-  - the target contains a junction or symlink a recursive delete could traverse
-  - a junction or symlink elsewhere points into the target, or a shim script
-    (.cmd, .ps1, .sh, extensionless) mentions its path. Only the target's parent,
-    PNPM_HOME, %LOCALAPPDATA%\\pnpm and ~/.local are searched, to a shallow depth.
+Naming a link to delete it (`rm -rf link`, `Remove-Item -Recurse link`, `rd /s link`)
+removes only the link, so that stays silent. A delete that goes through a link removes
+files inside its target, so it asks:
 
-A hit prints a PreToolUse `ask` decision naming each reference. Otherwise nothing is
-printed. Unparseable input, an unresolvable path or a slow search prints nothing and
-exits 0: the guard never blocks on its own failure.
+  - a path component before the last is a link: `rm -rf link/sub`, `rm -rf link/*`
+  - the path names a link with a trailing separator: `rm -rf link/`
+  - cmd's `del`/`erase`, which delete the files inside a directory operand
+  - a `Get-ChildItem`/`find` whose results are piped into a delete verb
+
+Only the path components the command spells out are checked, not those of `cwd`.
+Unparseable input or an unresolvable path prints nothing and exits 0: the guard never
+blocks on its own failure.
 """
 
 from __future__ import annotations
 
+import glob
 import json
 import os
 import re
 import stat
 import sys
-import time
-from collections.abc import Iterator
-from pathlib import Path
+from enum import Enum
 
 DELETE_VERBS = frozenset({"rm", "rmdir", "remove-item", "del", "erase", "ri", "rd"})
-# Cheap pre-filter for the common case; the tokenizer below does the real work.
+CMD_CONTENT_VERBS = frozenset({"del", "erase"})  # under cmd they empty a directory operand
+CMD_SWITCH_VERBS = frozenset({"del", "erase", "rd"})  # take /s, /q; rmdir only under cmd
+ENUMERATORS = frozenset({"get-childitem", "gci", "ls", "dir", "find"})
+SHELLS = frozenset({"bash", "sh", "zsh", "pwsh", "powershell"})
+WRAPPERS = frozenset({"sudo", "command", "exec", "nice", "time", "env", "xargs"})
+VALUE_PARAMS = frozenset({"-include", "-exclude", "-filter", "-depth"})
+
+# Cheap pre-filter for the common case; the lexer below does the real work.
 DELETE_HINT = re.compile(r"(?<![\w-])(?:rm|rmdir|remove-item|del|erase|ri|rd)(?![\w-])", re.I)
-SEGMENT_SPLIT = re.compile(r"[;|&\n]+")
-TOKEN = re.compile(r'"([^"]*)"|\'([^\']*)\'|(\S+)')
-CMD_SWITCH = re.compile(r"^/[a-zA-Z?]$")
+TOKEN = re.compile(r'"([^"]*)"|\'([^\']*)\'|(\|\||&&|[;&|\n{}()])|([^\s"\';&|{}()]+)')
+STATEMENT_ENDS = frozenset({";", "&&", "||", "&", "\n"})
+BLOCK_MARKS = frozenset({"{", "}", "(", ")"})
+SCRIPT_FLAG = re.compile(r"^-(?:l?c|com(?:m(?:a(?:n(?:d)?)?)?)?)$", re.I)  # bash -c, pwsh -Command
+CMD_SWITCH = re.compile(r"^/[a-zA-Z?](?::\S*)?$")
 GIT_BASH_DRIVE = re.compile(r"^/([a-zA-Z])(?:/|$)")
 GLOB_CHARS = re.compile(r"[*?\[]")
 
 IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # junction
-SHIM_SUFFIXES = frozenset({".cmd", ".ps1", ".sh", ""})
-MAX_SHIM_BYTES = 16 * 1024
 MAX_GLOB_MATCHES = 50
 MAX_REFS = 10
-PARENT_DEPTH = 2
-NAMED_ROOT_DEPTH = 3
-CONTENT_DEPTH = 64
-DEADLINE_SECONDS = 6.0
+
+Word = tuple[bool, str]  # (was_quoted, text)
+Command = list[Word]
 
 
-def is_link(entry: os.DirEntry[str]) -> bool:
-    try:
-        st = entry.stat(follow_symlinks=False)
-    except OSError:
-        return False
-    if stat.S_ISLNK(st.st_mode):
-        return True
-    return getattr(st, "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
+class Reach(Enum):
+    ENTRY = "entry"  # the named path itself goes; a link there is removed as a link
+    CONTENTS = "contents"  # what is inside the named path goes, so a link there is followed
 
 
-def path_is_link(path: str) -> bool:
+def link_kind(path: str) -> str | None:
     try:
         st = os.lstat(path)
     except OSError:
-        return False
+        return None
     if stat.S_ISLNK(st.st_mode):
-        return True
-    return getattr(st, "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
-
-
-def within(path: str, root: str) -> bool:
-    path, root = os.path.normcase(path), os.path.normcase(root)
-    return path == root or path.startswith(root.rstrip("\\/") + os.sep)
-
-
-def walk(root: str, max_depth: int, deadline: float, prune: str | None = None) -> Iterator[os.DirEntry[str]]:
-    """Yield every entry under root without following links; stop at the deadline."""
-    stack = [(root, 1)]
-    while stack:
-        if time.monotonic() > deadline:
-            return
-        directory, depth = stack.pop()
-        try:
-            entries = list(os.scandir(directory))
-        except OSError:
-            continue
-        for entry in entries:
-            yield entry
-            if depth >= max_depth or is_link(entry):
-                continue
-            if prune and within(entry.path, prune):
-                continue
-            try:
-                if entry.is_dir(follow_symlinks=False):
-                    stack.append((entry.path, depth + 1))
-            except OSError:
-                continue
-
-
-def tokens(segment: str) -> list[tuple[str, bool]]:
-    """Split on whitespace, keeping quoted runs whole. Returns (text, was_quoted)."""
-    return [(dq or sq or bare, bool(dq or sq)) for dq, sq, bare in TOKEN.findall(segment)]
+        return "symlink"
+    if getattr(st, "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT:
+        return "junction"
+    return None
 
 
 def verb_of(token: str) -> str:
@@ -108,126 +77,181 @@ def verb_of(token: str) -> str:
     return name[:-4] if name.endswith(".exe") else name
 
 
-def raw_targets(command: str) -> list[str]:
-    """Arguments of every delete verb in the command, quotes stripped, flags dropped."""
-    found: list[str] = []
-    for segment in SEGMENT_SPLIT.split(command):
-        toks = tokens(segment)
-        if not toks or verb_of(toks[0][0]) == "git":
+def pipelines(command: str) -> list[list[list[Command]]]:
+    """Group words into pipelines of stages of commands, splitting outside quotes.
+
+    `;`, `&&`, `||`, `&` and newlines end a pipeline, `|` ends a stage, and braces or
+    parentheses start a new command within the stage (`ForEach-Object { Remove-Item }`).
+    """
+    result: list[list[list[Command]]] = []
+    pipeline: list[list[Command]] = []
+    stage: list[Command] = []
+    command_words: Command = []
+    for dq, sq, op, bare in TOKEN.findall(command):
+        if not op:
+            command_words.append((not bare, bare or dq or sq))
             continue
-        for i, (text, quoted) in enumerate(toks):
-            if quoted and " " in text and DELETE_HINT.search(text):
-                found.extend(raw_targets(text))  # powershell -c "Remove-Item ..."
-            if verb_of(text) not in DELETE_VERBS:
-                continue
-            for arg, _ in toks[i + 1 :]:
-                if arg.startswith("-") or CMD_SWITCH.match(arg):
-                    continue
-                found.append(arg)
-                if "," in arg:
-                    found.extend(part for part in arg.split(",") if part)
+        if command_words:
+            stage.append(command_words)
+            command_words = []
+        if op in BLOCK_MARKS:
+            continue
+        if stage:
+            pipeline.append(stage)
+            stage = []
+        if op in STATEMENT_ENDS and pipeline:
+            result.append(pipeline)
+            pipeline = []
+    if command_words:
+        stage.append(command_words)
+    if stage:
+        pipeline.append(stage)
+    if pipeline:
+        result.append(pipeline)
+    return result
+
+
+def rejoin(words: Command) -> str:
+    if len(words) == 1 and words[0][0]:
+        return words[0][1]
+    return " ".join(f'"{text}"' if quoted else text for quoted, text in words)
+
+
+def unwrap(words: Command, under_cmd: bool) -> tuple[str, Command, str | None, bool]:
+    """(verb, args, nested script, under_cmd) after dropping `sudo`, `xargs -0` and the like."""
+    while words and verb_of(words[0][1]) in WRAPPERS:
+        words = words[1:]
+        while words and (words[0][1].startswith("-") or "=" in words[0][1]):
+            words = words[1:]
+    if not words:
+        return "", [], None, under_cmd
+    verb, args = verb_of(words[0][1]), words[1:]
+    for i, (quoted, text) in enumerate(args):
+        if verb == "cmd" and text.lower() in ("/c", "/k"):
+            return verb, [], rejoin(args[i + 1 :]), True
+        if verb in SHELLS and not quoted and SCRIPT_FLAG.match(text):
+            return verb, [], rejoin(args[i + 1 :]), False
+    return verb, args, None, under_cmd
+
+
+def positional(args: Command, switches: bool) -> list[str]:
+    """Path arguments: flags, their values and cmd `/x` switches dropped."""
+    found: list[str] = []
+    skip_value = False
+    for quoted, text in args:
+        if skip_value:
+            skip_value = False
+            continue
+        if not quoted and text.startswith("-"):
+            skip_value = text.lower() in VALUE_PARAMS
+            continue
+        if not quoted and switches and CMD_SWITCH.match(text):
+            continue
+        found.append(text)
+        if not quoted and "," in text:  # PowerShell array: Remove-Item a,b
+            found.extend(part for part in text.split(",") if part)
     return found
 
 
-def resolve(raw: str, cwd: str) -> list[str]:
+def has_trailing_separator(raw: str) -> bool:
+    return raw.endswith(("/", "\\")) and raw.rstrip("/\\") not in ("", ".") and not raw.endswith(":\\")
+
+
+def delete_operands(verb: str, args: Command, under_cmd: bool) -> list[tuple[str, Reach]]:
+    switches = verb in CMD_SWITCH_VERBS or (under_cmd and verb == "rmdir")
+    empties = under_cmd and verb in CMD_CONTENT_VERBS
+    return [
+        (raw, Reach.CONTENTS if empties or has_trailing_separator(raw) else Reach.ENTRY)
+        for raw in positional(args, switches)
+    ]
+
+
+def enumerated_paths(verb: str, args: Command) -> list[str]:
+    if verb != "find":
+        return positional(args, switches=False)
+    paths: list[str] = []
+    for _, text in args:
+        if text in ("-H", "-L", "-P"):
+            continue
+        if text.startswith(("-", "!", "(")):
+            break
+        paths.append(text)
+    return paths
+
+
+def operands(command: str, under_cmd: bool = False) -> list[tuple[str, Reach]]:
+    """Every path a delete in the command removes, with how far the delete reaches."""
+    found: list[tuple[str, Reach]] = []
+    for pipeline in pipelines(command):
+        sources: list[tuple[int, str]] = []
+        last_delete_stage = -1
+        for index, stage in enumerate(pipeline):
+            for words in stage:
+                verb, args, nested, nested_under_cmd = unwrap(words, under_cmd)
+                if nested is not None:
+                    found.extend(operands(nested, nested_under_cmd))
+                elif verb in DELETE_VERBS:
+                    found.extend(delete_operands(verb, args, nested_under_cmd))
+                    last_delete_stage = index
+                elif verb in ENUMERATORS:
+                    sources.extend((index, path) for path in enumerated_paths(verb, args))
+        # A delete fed by an enumerator removes what the enumerator listed inside its path.
+        found.extend((path, Reach.CONTENTS) for index, path in sources if index < last_delete_stage)
+    return found
+
+
+def expand(raw: str) -> str | None:
     path = os.path.expandvars(os.path.expanduser(raw))
     if "$" in path or "%" in path:
-        return []
+        return None
     drive = GIT_BASH_DRIVE.match(path)
     if drive and os.name == "nt":
         path = f"{drive.group(1)}:{path[2:] or '/'}"
-    if not os.path.isabs(path):
-        path = os.path.join(cwd, path)
-    if GLOB_CHARS.search(path):
-        import glob
-
-        matches = glob.glob(path)[:MAX_GLOB_MATCHES]
-    else:
-        matches = [path]
-    return [os.path.normpath(m) for m in matches if os.path.lexists(m)]
+    return path
 
 
-def search_roots(targets: list[str]) -> list[tuple[str, int]]:
-    """(directory, depth) pairs, deduplicated; the deeper depth wins."""
-    roots = [(os.path.dirname(t), PARENT_DEPTH) for t in targets]
-    if os.environ.get("PNPM_HOME"):
-        roots.append((os.environ["PNPM_HOME"], NAMED_ROOT_DEPTH))
-    if os.environ.get("LOCALAPPDATA"):
-        roots.append((os.path.join(os.environ["LOCALAPPDATA"], "pnpm"), NAMED_ROOT_DEPTH))
-    roots.append((os.path.join(os.path.expanduser("~"), ".local"), NAMED_ROOT_DEPTH))
-    seen: dict[str, tuple[str, int]] = {}
-    for root, depth in roots:
-        if not os.path.isdir(root):
-            continue
-        key = os.path.normcase(os.path.abspath(root))
-        if key not in seen or seen[key][1] < depth:
-            seen[key] = (root, depth)
-    return list(seen.values())
-
-
-def mention_forms(target: str, shim_dir: str) -> list[str]:
-    """Spellings of target a shim could use: absolute, Git Bash, and relative to the shim."""
-    forms = {target, target.replace("\\", "/")}
-    drive = re.match(r"^([a-zA-Z]):[\\/]", target)
-    if drive:
-        forms.add(f"/{drive.group(1).lower()}/" + target[3:].replace("\\", "/"))
+def spelled_out_start(full: str, cwd: str, relative: bool) -> str:
+    """Directory above the part of `full` the command spelled out."""
+    anchor = os.path.splitdrive(full)[0] + os.sep
+    if not relative:
+        return anchor
     try:
-        rel = os.path.relpath(target, shim_dir)
+        return os.path.commonpath([full, os.path.normpath(cwd)])
     except ValueError:  # different drive
-        rel = ""
-    if rel and not rel.startswith(".."):
-        # Leading separator, as in `$basedir/pkg`, so a bare name in a .gitignore misses.
-        forms.update({"\\" + rel, "/" + rel.replace("\\", "/")})
-    return [f.lower() for f in forms]
+        return anchor
 
 
-def shim_mentions(entry: os.DirEntry[str], target: str) -> bool:
-    if entry.name.startswith(".") or Path(entry.name).suffix.lower() not in SHIM_SUFFIXES:
-        return False
-    try:
-        if not entry.is_file(follow_symlinks=False) or entry.stat().st_size > MAX_SHIM_BYTES:
-            return False
-        data = Path(entry.path).read_bytes()
-    except OSError:
-        return False
-    if b"\0" in data:
-        return False
-    text = data.decode("utf-8", errors="ignore").lower()
-    return any(form in text for form in mention_forms(target, os.path.dirname(entry.path)))
+def first_link(full: str, start: str, reach: Reach) -> str | None:
+    rel = os.path.relpath(full, start)
+    parts = [] if rel == os.curdir else rel.split(os.sep)
+    if reach is Reach.ENTRY:
+        parts = parts[:-1]
+    current = start
+    for part in parts:
+        current = os.path.join(current, part)
+        if link_kind(current):
+            return current
+    return None
 
 
-def find_references(targets: list[str], deadline: float) -> list[str]:
-    refs: list[str] = []
-
-    def full() -> bool:
-        return len(refs) >= MAX_REFS
-
-    for target in targets:
-        if path_is_link(target):
-            refs.append(f"{target} is itself a junction or symlink")
-    for target in targets:
-        if path_is_link(target) or not os.path.isdir(target):
+def crossings(raw: str, reach: Reach, cwd: str) -> list[str]:
+    """The links a delete of `raw` passes through, as report lines."""
+    path = expand(raw)
+    if path is None:
+        return []
+    relative = not os.path.isabs(path)
+    joined = os.path.join(cwd, path) if relative else path
+    matches = glob.glob(joined)[:MAX_GLOB_MATCHES] if GLOB_CHARS.search(joined) else [joined]
+    lines: list[str] = []
+    for match in matches:
+        full = os.path.normpath(match)
+        link = first_link(full, spelled_out_start(full, cwd, relative), reach)
+        if not link:
             continue
-        for entry in walk(target, CONTENT_DEPTH, deadline):
-            if full():
-                return refs
-            if is_link(entry):
-                refs.append(f"{target} contains a junction or symlink: {entry.path}")
-
-    real = {t: (t if path_is_link(t) else os.path.realpath(t)) for t in targets}
-    for root, depth in search_roots(targets):
-        for entry in walk(root, depth, deadline):
-            if full():
-                return refs
-            for target in targets:
-                if within(entry.path, target):
-                    continue
-                if is_link(entry):
-                    if within(os.path.realpath(entry.path), real[target]):
-                        refs.append(f"{entry.path} (junction or symlink) points into {target}")
-                elif shim_mentions(entry, target):
-                    refs.append(f"shim {entry.path} mentions {target}")
-    return refs
+        line = f"`{raw}` reaches through {link_kind(link)} {link} -> {os.path.realpath(link)}"
+        if line not in lines:
+            lines.append(line)
+    return lines
 
 
 def main() -> int:
@@ -237,26 +261,26 @@ def main() -> int:
         cwd = payload.get("cwd") or os.getcwd()
     except (ValueError, KeyError, TypeError, AttributeError):
         return 0
-    if not isinstance(command, str) or not DELETE_HINT.search(command):
+    if not isinstance(command, str) or not isinstance(cwd, str) or not DELETE_HINT.search(command):
         return 0
 
-    deadline = time.monotonic() + DEADLINE_SECONDS
+    refs: list[str] = []
     try:
-        targets = sorted({p for raw in raw_targets(command) for p in resolve(raw, cwd)})
-        refs = find_references(targets, deadline) if targets else []
+        for raw, reach in operands(command):
+            refs.extend(line for line in crossings(raw, reach, cwd) if line not in refs)
     except OSError:
         return 0
     if not refs:
         return 0
 
-    reason = "This delete may break things that depend on the target:\n- " + "\n- ".join(refs)
+    reason = "This delete reaches through a junction or symlink and would remove files in its target:\n- "
     print(
         json.dumps(
             {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
                     "permissionDecision": "ask",
-                    "permissionDecisionReason": reason,
+                    "permissionDecisionReason": reason + "\n- ".join(refs[:MAX_REFS]),
                 }
             }
         )
