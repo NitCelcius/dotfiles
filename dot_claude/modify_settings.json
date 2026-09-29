@@ -8,6 +8,7 @@
 {{- /*   hooks.PermissionRequest, PreToolUse, Stop (play-sound.sh) — sound   */ -}}
 {{- /*                       cues for permission prompts, AskUserQuestion,  */ -}}
 {{- /*                       and task completion                            */ -}}
+{{- /*   hooks.PreToolUse   — asks before a delete a shim relies on         */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
@@ -103,6 +104,13 @@
 {{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptStopSound = append $keptStopSound . -}}{{- end -}}
 {{- end -}}
 {{- $cfg = setValueAtPath "hooks.Stop" (prepend $keptStopSound $completeHook) $cfg -}}
+{{- $rmGuard := printf "%s/.claude/rm-junction-guard/rm_junction_guard.py" .chezmoi.homeDir -}}
+{{- $rmHook := dict "type" "command" "command" (printf "python \"%s\"" $rmGuard) "timeout" 10 -}}
+{{- $keptPre := list -}}
+{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
+{{-   if not (contains "rm_junction_guard.py" (toJson .)) -}}{{- $keptPre = append $keptPre . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptPre (dict "matcher" "Bash|PowerShell" "hooks" (list $rmHook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
