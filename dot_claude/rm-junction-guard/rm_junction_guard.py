@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ask before a delete command reaches through a junction or symlink into its target.
+"""Ask before a delete command reaches through a link or breaks a global shim.
 
 Wired as a PreToolUse hook (matcher `Bash|PowerShell`). Reads the hook payload on
 stdin for `tool_input.command` and `cwd`. A command with no delete verb (`rm`,
@@ -15,6 +15,11 @@ files inside its target, so it asks:
   - a `Get-ChildItem`/`find` whose results are piped into a delete verb
 
 Only the path components the command spells out are checked, not those of `cwd`.
+
+It also asks when the deleted path runs through a folder named `node_modules`, a pnpm
+store, `.venv` or `venv`, and a shim (.cmd, .ps1, .sh, extensionless) directly in
+PNPM_HOME, %LOCALAPPDATA%\\pnpm, %APPDATA%\\npm or ~/.local/bin names a path inside it.
+
 Unparseable input or an unresolvable path prints nothing and exits 0: the guard never
 blocks on its own failure.
 """
@@ -28,6 +33,7 @@ import re
 import stat
 import sys
 from enum import Enum
+from pathlib import Path
 
 DELETE_VERBS = frozenset({"rm", "rmdir", "remove-item", "del", "erase", "ri", "rd"})
 CMD_CONTENT_VERBS = frozenset({"del", "erase"})  # under cmd they empty a directory operand
@@ -50,6 +56,12 @@ GLOB_CHARS = re.compile(r"[*?\[]")
 IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # junction
 MAX_GLOB_MATCHES = 50
 MAX_REFS = 10
+
+# A delete through one of these names can take out what a global shim runs.
+SHIM_FED_NAMES = frozenset({"node_modules", ".pnpm-store", "store", ".venv", "venv"})
+SHIM_SUFFIXES = frozenset({".cmd", ".ps1", ".sh", ""})
+SHIM_BASE_DIRS = ("%~dp0", "%dp0%", "$basedir")  # how pnpm/npm shims spell their own dir
+MAX_SHIM_BYTES = 16 * 1024
 
 Word = tuple[bool, str]  # (was_quoted, text)
 Command = list[Word]
@@ -234,24 +246,90 @@ def first_link(full: str, start: str, reach: Reach) -> str | None:
     return None
 
 
-def crossings(raw: str, reach: Reach, cwd: str) -> list[str]:
-    """The links a delete of `raw` passes through, as report lines."""
+def shim_dirs() -> list[str]:
+    candidates = [
+        os.environ.get("PNPM_HOME", ""),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "pnpm"),
+        os.path.join(os.environ.get("APPDATA", ""), "npm"),
+        os.path.join(os.path.expanduser("~"), ".local", "bin"),
+    ]
+    seen: dict[str, str] = {}
+    for directory in candidates:
+        if os.path.isabs(directory) and os.path.isdir(directory):
+            seen.setdefault(os.path.normcase(os.path.abspath(directory)), directory)
+    return list(seen.values())
+
+
+def shim_texts() -> list[tuple[str, str]]:
+    """(path, lowercased text) of every shim directly inside a shim directory."""
+    shims: list[tuple[str, str]] = []
+    for directory in shim_dirs():
+        try:
+            entries = list(os.scandir(directory))
+        except OSError:
+            continue
+        for entry in entries:
+            if entry.name.startswith(".") or Path(entry.name).suffix.lower() not in SHIM_SUFFIXES:
+                continue
+            try:
+                if not entry.is_file(follow_symlinks=False) or entry.stat().st_size > MAX_SHIM_BYTES:
+                    continue
+                data = Path(entry.path).read_bytes()
+            except OSError:
+                continue
+            if b"\0" not in data:
+                shims.append((entry.path, data.decode("utf-8", errors="ignore").lower()))
+    return shims
+
+
+def mention_pattern(target: str, shim_dir: str) -> re.Pattern[str]:
+    """Spellings of target a shim could use: absolute, Git Bash, and from the shim's own dir.
+
+    A relative spelling counts only right after the shim's base-dir token, so
+    `%~dp0\\global\\...\\node_modules` does not match `node_modules` beside the shim.
+    """
+    forms = {target, target.replace("\\", "/")}
+    drive = re.match(r"^([a-zA-Z]):[\\/]", target)
+    if drive:
+        forms.add(f"/{drive.group(1).lower()}/" + target[3:].replace("\\", "/"))
+    try:
+        rel = os.path.relpath(target, shim_dir)
+    except ValueError:  # different drive
+        rel = ""
+    if rel and rel != os.curdir and not rel.startswith(".."):
+        for base in SHIM_BASE_DIRS:
+            forms.update({f"{base}\\{rel}", f"{base}/{rel.replace(os.sep, '/')}"})
+    alternatives = "|".join(re.escape(form.lower()) for form in forms)
+    return re.compile(rf"(?:{alternatives})(?=[\\/\"'\s]|$)")
+
+
+def resolved(raw: str, cwd: str) -> list[tuple[str, str]]:
+    """(full path, start of the spelled-out part) for each path `raw` names."""
     path = expand(raw)
     if path is None:
         return []
     relative = not os.path.isabs(path)
     joined = os.path.join(cwd, path) if relative else path
     matches = glob.glob(joined)[:MAX_GLOB_MATCHES] if GLOB_CHARS.search(joined) else [joined]
+    return [(full, spelled_out_start(full, cwd, relative)) for full in map(os.path.normpath, matches)]
+
+
+def references(raw: str, reach: Reach, cwd: str, shims: list[tuple[str, str]] | None) -> tuple[list[str], list[tuple[str, str]] | None]:
+    """Report lines for `raw`, plus the shim texts once they have been read."""
     lines: list[str] = []
-    for match in matches:
-        full = os.path.normpath(match)
-        link = first_link(full, spelled_out_start(full, cwd, relative), reach)
-        if not link:
+    for full, start in resolved(raw, cwd):
+        link = first_link(full, start, reach)
+        if link:
+            lines.append(f"`{raw}` reaches through {link_kind(link)} {link} -> {os.path.realpath(link)}")
+        names = {part.lower() for part in Path(full).parts}
+        if not names & SHIM_FED_NAMES:
             continue
-        line = f"`{raw}` reaches through {link_kind(link)} {link} -> {os.path.realpath(link)}"
-        if line not in lines:
-            lines.append(line)
-    return lines
+        if shims is None:
+            shims = shim_texts()
+        for shim, text in shims:
+            if mention_pattern(full, os.path.dirname(shim)).search(text):
+                lines.append(f"`{raw}` removes what shim {shim} runs")
+    return lines, shims
 
 
 def main() -> int:
@@ -265,15 +343,17 @@ def main() -> int:
         return 0
 
     refs: list[str] = []
+    shims: list[tuple[str, str]] | None = None  # read on first need, at most once
     try:
         for raw, reach in operands(command):
-            refs.extend(line for line in crossings(raw, reach, cwd) if line not in refs)
+            lines, shims = references(raw, reach, cwd, shims)
+            refs.extend(line for line in lines if line not in refs)
     except OSError:
         return 0
     if not refs:
         return 0
 
-    reason = "This delete reaches through a junction or symlink and would remove files in its target:\n- "
+    reason = "This delete removes more than the path it names:\n- "
     print(
         json.dumps(
             {

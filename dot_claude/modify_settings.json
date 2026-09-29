@@ -10,6 +10,7 @@
 {{- /*                       and task completion                            */ -}}
 {{- /*   hooks.PreToolUse   — asks before a delete a shim relies on         */ -}}
 {{- /*   hooks.PreToolUse   — asks before a delete through a link           */ -}}
+{{- /*   hooks.PreToolUse   — asks before deletes through links or shims    */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
