@@ -163,6 +163,8 @@ If a long-running process (server, training run, watch task) cannot be run in th
 
 For analysis, conversion, or batch processing, write intermediate results to files and have each downstream step read them back. Re-running and verifying then cost a diff of the intermediate artifact instead of a full re-run.
 
+A verification or pipeline run must not overwrite tracked outputs. Write to a temp output path, or check `git status` afterwards and restore what the run changed.
+
 ## Reading Files
 
 - For `docs/plans/*.md`, read the header block first, then pull in only the sections you need.
