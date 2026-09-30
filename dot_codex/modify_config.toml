@@ -1,7 +1,8 @@
 {{- /* chezmoi:modify-template */ -}}
 {{- /* Partial management: Codex's own app writes model choice, its     */ -}}
-{{- /* MCP node_repl bridge, marketplace/plugin caches, per-project     */ -}}
-{{- /* trust decisions, and desktop UI state directly into this file.   */ -}}
+{{- /* MCP node_repl/cua_repl bridges, marketplace/plugin caches,        */ -}}
+{{- /* per-project trust decisions, desktop UI state, and TUI one-time   */ -}}
+{{- /* notice state directly into this file.                            */ -}}
 {{- /* Those are carried over from the live file instead of being       */ -}}
 {{- /* owned/committed here; everything else is owned below.            */ -}}
 {{- $live := fromToml (.chezmoi.stdin | default "") -}}
@@ -9,8 +10,18 @@
 {{- $tables := dict -}}
 {{- if hasKey $live "mcp_servers" -}}
 {{-   $mcp := get $live "mcp_servers" -}}
-{{-   if hasKey $mcp "node_repl" -}}{{- $tables = set $tables "mcp_servers" (dict "node_repl" (get $mcp "node_repl")) -}}{{- end -}}
+{{-   $keptMcp := dict -}}
+{{-   range $name := list "node_repl" "cua_repl" -}}
+{{-     if hasKey $mcp $name -}}{{- $keptMcp = set $keptMcp $name (get $mcp $name) -}}{{- end -}}
+{{-   end -}}
+{{-   if $keptMcp -}}{{- $tables = set $tables "mcp_servers" $keptMcp -}}{{- end -}}
 {{- end -}}
+{{- $tui := dict "status_line" (list "project-name" "git-branch" "branch-changes" "context-used" "five-hour-limit" "task-progress" "weekly-limit" "pull-request-number") "status_line_use_colors" true "theme" "catppuccin-latte" "pet" "seedy" "fullscreen_transcript" true -}}
+{{- $liveTui := default (dict) (get $live "tui") -}}
+{{- range $k := list "screen_reader_detection_done" "model_availability_nux" -}}
+{{-   if hasKey $liveTui $k -}}{{- $tui = set $tui $k (get $liveTui $k) -}}{{- end -}}
+{{- end -}}
+{{- $tables = set $tables "tui" $tui -}}
 {{- range $k := list "marketplaces" "shell_environment_policy" "desktop" "projects" -}}
 {{-   if hasKey $live $k -}}{{- $tables = set $tables $k (get $live $k) -}}{{- end -}}
 {{- end -}}
@@ -26,15 +37,6 @@ sandbox = "elevated"
 
 [notice.model_migrations]
 "gpt-5.3-codex" = "gpt-5.4"
-
-[tui]
-status_line = ["project-name", "git-branch", "branch-changes", "context-used", "five-hour-limit", "task-progress", "weekly-limit"]
-status_line_use_colors = true
-theme = "catppuccin-latte"
-
-[tui.model_availability_nux]
-"gpt-5.5" = 4
-"gpt-5.6-sol" = 1
 
 [mcp_servers.unityMCP]
 url = "http://127.0.0.1:8080/mcp"
