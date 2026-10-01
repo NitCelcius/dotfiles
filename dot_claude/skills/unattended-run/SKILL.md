@@ -33,14 +33,20 @@ command that would otherwise ask:
 - Cleared without asking: WIP commits, a non-force push of the working branch, rebase,
   removing worktrees this run created, and `git branch -D` of a branch that is local-only
   or fully pushed.
+- Never open a PR: the user reviews it before anything is published. When the work is
+  ready for one, run `draft-pr` steps 1–3 and stop there: carry step 2's findings into
+  the final report instead of waiting on them, and leave the body in its file and the
+  title for the final report.
 - Before a forced branch delete, record the tip's full SHA (`git rev-parse <branch>`).
   The delete also removes the branch's reflog, and once its worktree is gone nothing else
   points at an unpushed tip; gc prunes it after about two weeks.
 
 ## Final report
 
-Close out with the usual headings, plus these two when they have entries:
+Close out with the usual headings, plus these when they have entries:
 
+- `# PR draft` — the body file's absolute path, the proposed title on one line, and the
+  findings from the `draft-pr` checks.
 - `# Skipped (needs approval)` — each denied command verbatim, the hook's reason, and
   what it would have done.
 - `# Deleted branches` — `<repo> <branch> <full SHA>` per forced delete, restorable with
