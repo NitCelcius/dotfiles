@@ -13,10 +13,14 @@
 {{- /*   hooks.PreToolUse   — asks before a delete through a link           */ -}}
 {{- /*   hooks.PreToolUse   — asks before deletes through links or shims    */ -}}
 {{- /*   hooks.PreToolUse   — asks on link/shim deletes, denies link globs  */ -}}
+{{- /*   hooks.PreToolUse   — git-gate: asks before a forced branch delete   */ -}}
+{{- /*                       loses unpushed work, gates +/: refspec pushes   */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
-{{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
+{{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls,   */ -}}
+{{- /*                       plus rebases and forced branch deletes          */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
+{{- /*   (git rules in allow/deny/ask are mirrored as PowerShell(...) rules) */ -}}
 {{- /*   syncClaudeAiSkills — false: claude.ai skills stay out of the context  */ -}}
 {{- /*   cleanupPeriodDays  — 9999: session transcripts are kept ~indefinitely */ -}}
 {{- /*   worktree.baseRef   — Workcell executors branch from the current HEAD */ -}}
@@ -36,6 +40,14 @@
       "Bash(chezmoi diff *)"
       "Bash(chezmoi source-path *)"
       "Bash(git check-ignore *)" -}}
+{{- /* Local-only history edits. git-gate asks for the one forced delete that  */ -}}
+{{- /* loses work a static rule cannot see: a remote-backed branch's unpushed  */ -}}
+{{- /* commits. Publishing a rebase needs a force push, which stays gated.     */ -}}
+{{- $gitAllowRules := list
+      "Bash(git branch -D *)"
+      "Bash(git rebase*)"
+      "Bash(git pull --rebase*)"
+      "Bash(git pull -r*)" -}}
 {{- $denyRules := list
       "Bash(git push --force)"
       "Bash(git push --force *)"
@@ -47,27 +59,43 @@
       "Bash(git push * -f *)" -}}
 {{- $askRules := list
       "Bash(gh pr create*)"
-      "Bash(git rebase*)"
-      "Bash(git pull --rebase*)"
-      "Bash(git pull -r*)"
       "Bash(git push --force*)"
       "Bash(git push -f*)"
       "Bash(git push * --force-with-lease*)"
       "Bash(git push --force-with-lease*)"
       "Bash(git reset --hard*)"
       "Bash(gh pr merge*)"
-      "Bash(git branch -D*)"
       "Bash(git push origin --delete*)"
       "Bash(gh pr close*)"
       "Bash(gh issue close*)" -}}
+{{- /* Ask rules this template used to add. The union below would keep them in */ -}}
+{{- /* the live file forever, so they are dropped from it explicitly.          */ -}}
+{{- $retiredAskRules := list
+      "Bash(git rebase*)"
+      "Bash(git pull --rebase*)"
+      "Bash(git pull -r*)"
+      "Bash(git branch -D*)" -}}
+{{- /* Bash(...) rules never match the PowerShell tool, so mirror the git ones. */ -}}
+{{- range $r := $gitAllowRules -}}
+{{-   $allowRules = append (append $allowRules $r) (replace "Bash(" "PowerShell(" $r) -}}
+{{- end -}}
+{{- range $r := $denyRules -}}
+{{-   $denyRules = append $denyRules (replace "Bash(" "PowerShell(" $r) -}}
+{{- end -}}
+{{- range $r := $askRules -}}
+{{-   $askRules = append $askRules (replace "Bash(" "PowerShell(" $r) -}}
+{{- end -}}
 {{- $in := default "{}" (trim .chezmoi.stdin) -}}
 {{- $cfg := fromJson $in -}}
 {{- $liveAllow := default (list) (dig "permissions" "allow" (list) $cfg) -}}
 {{- $cfg = setValueAtPath "permissions.allow" (concat $liveAllow $allowRules | uniq) $cfg -}}
 {{- $liveDeny := default (list) (dig "permissions" "deny" (list) $cfg) -}}
 {{- $cfg = setValueAtPath "permissions.deny" (concat $liveDeny $denyRules | uniq) $cfg -}}
-{{- $liveAsk := default (list) (dig "permissions" "ask" (list) $cfg) -}}
-{{- $cfg = setValueAtPath "permissions.ask" (concat $liveAsk $askRules | uniq) $cfg -}}
+{{- $keptAsk := list -}}
+{{- range default (list) (dig "permissions" "ask" (list) $cfg) -}}
+{{-   if not (has . $retiredAskRules) -}}{{- $keptAsk = append $keptAsk . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "permissions.ask" (concat $keptAsk $askRules | uniq) $cfg -}}
 {{- $cfg = setValueAtPath "syncClaudeAiSkills" false $cfg -}}
 {{- $cfg = setValueAtPath "cleanupPeriodDays" 9999 $cfg -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
@@ -130,6 +158,15 @@
 {{-   if not (contains "rm_junction_guard.py" (toJson .)) -}}{{- $keptPre = append $keptPre . -}}{{- end -}}
 {{- end -}}
 {{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptPre (dict "matcher" "Bash|PowerShell" "hooks" (list $rmHook))) $cfg -}}
+{{- /* Timeout covers a few 5s-capped git calls per deleted branch; a timed-out */ -}}
+{{- /* hook would let a forced delete through on the allow rule.               */ -}}
+{{- $gitGate := printf "%s/.claude/git-gate/git_gate.py" .chezmoi.homeDir -}}
+{{- $gateHook := dict "type" "command" "command" (printf "python \"%s\"" $gitGate) "timeout" 30 -}}
+{{- $keptGate := list -}}
+{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
+{{-   if not (contains "git_gate.py" (toJson .)) -}}{{- $keptGate = append $keptGate . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptGate (dict "matcher" "Bash|PowerShell" "hooks" (list $gateHook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
