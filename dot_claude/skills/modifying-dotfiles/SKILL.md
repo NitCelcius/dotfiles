@@ -56,6 +56,10 @@ options, and the call shape are in `schema.md`; copy them verbatim.
   不明. Never write a guess as 確定.
 - If the reason is missing, ask once for it, in the same message that shows the draft.
 - Before creating, query the data source for a row with the same リンク and skip if found.
+- After writing the row, or when the user skips it, run
+  `python ~/.claude/dotfiles-change-log/dotfiles_change_log.py mark <sha>` so the
+  SessionStart count of unlogged commits stays right. After a reconcile, mark the newest
+  commit handled.
 - Japanese text follows the Content rules in `save-to-knowledge/SKILL.md`.
 
 ### Reconcile mode
