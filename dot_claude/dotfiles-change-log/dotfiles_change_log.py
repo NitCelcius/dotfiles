@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Prompt Claude to log the why of each dotfiles commit to the Notion change log.
 
-The hook never writes to Notion; it only tells Claude, which drafts the row per step 5
-of the `modifying-dotfiles` skill and writes it after the user approves. The dotfiles
-repo is found with `chezmoi source-path`, so the session's cwd does not matter.
+It tells Claude, which drafts the row per step of the `modifying-dotfiles` skill and writes it after the user approves. The dotfiles repo is found with `chezmoi source-path`
 
 Subcommands:
 
