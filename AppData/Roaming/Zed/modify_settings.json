@@ -12,6 +12,11 @@
 {{- end -}}
 {{- $opening := "{\n" -}}
 {{- if $sshBlock -}}{{- $opening = printf "%s%s" $opening $sshBlock -}}{{- end -}}
+{{- /* Live-owned keys nested in source-owned objects: kept from the live file. */ -}}
+{{- $dataCollection := dig "edit_predictions" "allow_data_collection" "" $live -}}
+{{- $autoCompact := dig "agent" "auto_compact" "" $live -}}
+{{- $playSound := dig "agent" "play_sound_when_agent_done" "" $live -}}
+{{- $codexOptions := dig "agent_servers" "codex-acp" "default_config_options" "" $live -}}
 // Zed settings
 //
 // For information on how to configure Zed, see the Zed
@@ -22,7 +27,8 @@
 // command palette (cmd-shift-p / ctrl-shift-p)
 {{ $opening }}  "diff_view_style": "split",
   "edit_predictions": {
-    "provider": "zed",
+{{ if $dataCollection }}    "allow_data_collection": {{ toJson $dataCollection }},
+{{ end }}    "provider": "zed",
   },
   "mouse_wheel_zoom": true,
   "ui_font_family": ".ZedSans",
@@ -81,7 +87,9 @@
     },
   },
   "agent": {
-    "show_turn_stats": true,
+{{ if $autoCompact }}    "auto_compact": {{ toJson $autoCompact }},
+{{ end }}{{ if $playSound }}    "play_sound_when_agent_done": {{ toJson $playSound }},
+{{ end }}    "show_turn_stats": true,
     "thinking_display": "auto",
     "enable_feedback": false,
     "dock": "right",
@@ -128,7 +136,8 @@
       "type": "registry",
     },
     "codex-acp": {
-      "type": "registry",
+{{ if $codexOptions }}      "default_config_options": {{ toJson $codexOptions }},
+{{ end }}      "type": "registry",
     },
   },
   "terminal": {
