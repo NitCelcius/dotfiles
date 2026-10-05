@@ -1,6 +1,6 @@
 ---
 name: hear-my-plan
-description: Use before any new project, feature, or architecture change when the user dumps a long, rough, or incomplete idea (roughly 120+ words), or says "let's discuss". Hear the idea out, pull it back to purpose and goals, and produce a clear execution plan. Do NOT implement until the user approves. Skip small, clear, well-scoped tasks. Always available explicitly via /hear-my-plan. Distinct from `brainstorming`, which is for scoped feature/design work where the design itself (not the framing) needs figuring out — this skill is for an unstructured dump that needs reorganizing back to purpose before any design starts. Interrogating a plan that already has shape belongs to the grilling skill.
+description: Turns a long, rough idea dump into an agreed plan before building. Use for a 120+ word idea or "let's discuss"; scoped design → brainstorming.
 ---
 
 # Hear My Plan

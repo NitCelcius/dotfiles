@@ -1,6 +1,6 @@
 ---
 name: reduce-refs-metafile
-description: Use when a Windows ReFS drive or Dev Drive (DevDrive) has millions of files and high Metafile / metadata RAM usage, or when reclaiming file-count and disk on a dev tree bloated by node_modules, package stores, build caches, virtualenvs, or old idle projects.
+description: Cuts file count and Metafile RAM on a ReFS or Dev Drive. Use when a dev tree is bloated by node_modules, caches, venvs, or idle projects.
 ---
 
 # Reduce ReFS Metafile RAM by Cutting File Count

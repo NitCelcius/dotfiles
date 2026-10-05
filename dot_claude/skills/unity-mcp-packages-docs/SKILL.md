@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-packages-docs
-description: Use when installing/managing Unity packages, configuring physics (settings, collision matrix, materials, joints, raycasts, rigidbodies), or verifying Unity C# APIs / fetching documentation through MCP for Unity — covers manage_packages, manage_physics, unity_reflect, and unity_docs.
+description: Manages Unity packages and physics, and checks Unity C# APIs and docs. Use for that work via MCP for Unity.
 ---
 
 # Unity-MCP Package, Physics & Docs Tools

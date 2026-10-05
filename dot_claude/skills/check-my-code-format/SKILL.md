@@ -1,6 +1,6 @@
 ---
 name: check-my-code-format
-description: Use when asked to verify naming conventions, design token usage, CSS class prefixes, or other code style standards against project conventions.
+description: Checks naming, design tokens, CSS class prefixes, and other style rules. Use when asked to verify code against project conventions.
 ---
 
 # check-my-code-format

@@ -1,6 +1,6 @@
 ---
 name: chezmoi-sync
-description: Use before running `chezmoi apply`, or when `chezmoi status` shows a two-letter `MM` code — a `modify_`-templated file where a blind apply can silently drop a live-only field the template doesn't carry over.
+description: Applies chezmoi without dropping live-only fields from `modify_` templates. Use before `chezmoi apply`, or when `chezmoi status` shows `MM`.
 ---
 
 # Chezmoi Sync

@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-core
-description: Use when starting any Unity Editor automation task through MCP for Unity, before calling manage_gameobject, create_script, manage_scene, or any other MCP for Unity tool — establishes editor-state checks, compilation waits, batch_execute usage, and console/screenshot verification that every Unity-MCP tool call depends on.
+description: Sets editor-state, compile-wait, and verification basics for MCP for Unity. Use before the first MCP for Unity tool call in a task.
 ---
 
 # Unity-MCP Core

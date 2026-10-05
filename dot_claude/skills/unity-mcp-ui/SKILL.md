@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-ui
-description: Use when building or editing Unity UI through MCP for Unity — either UI Toolkit (UXML/USS via manage_ui) or uGUI/Canvas-based UI (Canvas, Button, Text, Slider, Toggle, Input Field, EventSystem, RectTransform via manage_gameobject/manage_components). Also covers choosing between the old and new Input System for EventSystem wiring.
+description: Builds or edits Unity UI (UI Toolkit, uGUI Canvas, EventSystem input). Use for UI work via MCP for Unity.
 ---
 
 # Unity-MCP UI Tools

@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Use before creating a branch, adding a local ignore pattern, fetching, rebasing, or merging, and when a commit fails to sign. Holds branch naming, ignore-pattern placement, fetch-before-rebase, the merge strategy, and the SSH signing fallback. Commit message format, repo-root checks, and force-push rules stay in the global CLAUDE.md.
+description: Sets git conventions for branching, local ignores, fetch/rebase/merge, and signing. Use before those, or when a commit fails to sign.
 ---
 
 # Git workflow

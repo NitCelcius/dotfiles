@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-camera-graphics
-description: Use when configuring Unity cameras, Cinemachine, rendering/post-processing, ProBuilder mesh geometry, or the Profiler through MCP for Unity — covers manage_camera, manage_graphics (volumes, light baking, pipeline, URP renderer features), manage_probuilder (mesh editing), and manage_profiler.
+description: Configures cameras, Cinemachine, rendering, light baking, ProBuilder meshes, and the Profiler. Use for graphics work via MCP for Unity.
 ---
 
 # Unity-MCP Camera, Graphics, ProBuilder & Profiler Tools

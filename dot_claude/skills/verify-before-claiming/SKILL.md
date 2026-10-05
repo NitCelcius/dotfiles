@@ -1,6 +1,6 @@
 ---
 name: verify-before-claiming
-description: Use before asserting that a behavior works, is implemented, or is broken, when the evidence so far comes only from reading code rather than running it. Tag each such claim as VERIFIED-RUNTIME or INFERRED and say what would upgrade it. Also applies when the user already reports the opposite of what the code suggests — trust their observation over the code reading, and when deciding whether a result is worth a second agent to check.
+description: Tags claims as runtime-verified or inferred. Use before calling a behavior working or broken from code reading alone, or when the user reports otherwise.
 ---
 
 # Verify Before Claiming

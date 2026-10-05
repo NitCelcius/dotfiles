@@ -1,6 +1,6 @@
 ---
 name: review-my-diff
-description: Use when asked to review changes on the current branch or uncommitted edits. Accepts an optional base branch argument. Reviewing a PR number, or asking for an effort level or --fix, belongs to the built-in /code-review.
+description: Reviews the current branch's changes or uncommitted edits. Use when asked for a local review; PR numbers or --fix → built-in /code-review.
 ---
 
 # review-my-diff

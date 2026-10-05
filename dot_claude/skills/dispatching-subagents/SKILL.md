@@ -1,6 +1,6 @@
 ---
 name: dispatching-subagents
-description: Use before dispatching a subagent (Agent tool or Workflow). Decides whether the work belongs in a subagent or in main, what it must return, what needs user approval first, and how to check its result. Model choice, commit ownership, and the Workcell gate stay in the global CLAUDE.md.
+description: Decides whether and how to hand work to a subagent. Use before any Agent or Workflow dispatch.
 ---
 
 # Dispatching subagents

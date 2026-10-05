@@ -1,6 +1,6 @@
 ---
 name: draft-pr
-description: Use when ready to open a draft PR — runs commit log, lint, and signature checks in parallel, then creates a draft PR with a generated title and body.
+description: Checks the branch and opens a draft PR with a generated title and body. Use when a branch is ready for a PR.
 ---
 
 # Draft PR

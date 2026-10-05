@@ -1,6 +1,6 @@
 ---
 name: modifying-dotfiles
-description: Use when changing any config managed by the dotfiles chezmoi source (Claude Code settings, skills, hooks, Zed, git, shell), or when asked to log or reconcile why dotfiles changed.
+description: Changes chezmoi-managed dotfiles safely and logs why. Use for Claude settings, skills, hooks, Zed, git, or shell config.
 ---
 
 # Modifying dotfiles

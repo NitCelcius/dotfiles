@@ -1,6 +1,6 @@
 ---
 name: measure-first
-description: Use when a fix did not work and you are about to try another fix. The edit target is known but the cause is not. Design the cheapest observation that separates the candidate causes, run it, report what you observed, then make one fix aimed at that single point. Narrowing an unknown cause before the next fix; a full reproduce-and-diagnose session belongs to engineering:debug.
+description: Finds the cause with one cheap observation before the next fix. Use when a fix failed and the cause is unknown; full debugging → engineering:debug.
 ---
 
 # Measure First

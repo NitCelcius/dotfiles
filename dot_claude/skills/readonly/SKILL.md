@@ -1,6 +1,6 @@
 ---
 name: readonly
-description: Use when the user explicitly scopes a session to investigation, debugging, or codebase archaeology with no edits yet (e.g. "readonly", "planning only", "just look into this, don't touch anything"). Verify assumptions, cite file:line evidence, and end with a decision note that is presented in chat and saved only if asked. Do NOT edit files or run git-write commands until the user asks to implement. Distinct from hear-my-plan, which reorganizes a long new-feature idea dump rather than an investigation task.
+description: Runs a session without edits for investigation or debugging. Use when the user says "readonly", "planning only", or "just look".
 ---
 
 # Readonly

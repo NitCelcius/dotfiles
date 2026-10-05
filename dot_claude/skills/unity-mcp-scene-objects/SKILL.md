@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-scene-objects
-description: Use when creating, finding, modifying, or wiring GameObjects, Components, or Scenes through MCP for Unity — covers manage_scene, manage_gameobject, manage_components, find_gameobjects, scene hierarchy/screenshot actions, prefab instantiation into a scene, and cross-component reference wiring.
+description: Creates, finds, modifies, or wires GameObjects, Components, Scenes, and prefab instances. Use for scene work via MCP for Unity.
 ---
 
 # Unity-MCP Scene & GameObject Tools

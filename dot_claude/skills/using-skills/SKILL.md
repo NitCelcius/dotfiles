@@ -1,6 +1,6 @@
 ---
 name: using-skills
-description: Use when starting any conversation - establishes when to invoke skills. Skip if the edit target is explicit (file + change clearly stated). Invoke for open-ended design, feature work, or tasks where approach is unclear.
+description: Decides when to invoke skills. Use at the start of any conversation; skip when the edit target is explicit.
 ---
 
 <SUBAGENT-STOP>
