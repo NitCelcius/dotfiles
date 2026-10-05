@@ -96,16 +96,16 @@ skills/
 - Two required fields: `name` and `description` (see [agentskills.io/specification](https://agentskills.io/specification) for all supported fields)
 - Max 1024 characters total
 - `name`: Use letters, numbers, and hyphens only (no parentheses, special chars)
-- `description`: Third-person, describes ONLY when to use (NOT what it does)
-  - Start with "Use when..." to focus on triggering conditions
-  - Include specific symptoms, situations, and contexts
+- `description`: Third-person, what the skill does as an outcome, then when to use it
+  - Form: "<Verb>s <object>. Use when <trigger>." The first sentence is what a user sees in the skill list
+  - Include specific symptoms, situations, and contexts in the trigger
   - **NEVER summarize the skill's process or workflow** (see CSO section for why)
-  - Keep under 500 characters if possible
+  - Keep under about 150 characters; the skill list shows only the first two lines or so
 
 ```markdown
 ---
 name: Skill-Name-With-Hyphens
-description: Use when [specific triggering conditions and symptoms]
+description: <Verb>s <object>. Use when [specific triggering conditions and symptoms]
 ---
 
 # Skill Name
@@ -145,11 +145,11 @@ Concrete results
 
 **Purpose:** Claude reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
 
-**Format:** Start with "Use when..." to focus on triggering conditions
+**Format:** "<Verb>s <object>. Use when <trigger>." The first sentence names the outcome for a user scanning the skill list; the second tells Claude when to load the skill. When the trigger is obvious from the outcome, the first sentence alone is enough.
 
-**CRITICAL: Description = When to Use, NOT What the Skill Does**
+**CRITICAL: Outcome, NOT Process**
 
-The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
+The first sentence says what the skill produces, never how. Do NOT summarize the skill's process or workflow in the description.
 
 **Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
 
@@ -164,11 +164,11 @@ description: Use when executing plans - dispatches subagent per task with code r
 # ❌ BAD: Too much process detail
 description: Use for TDD - write test first, watch it fail, write minimal code, refactor
 
-# ✅ GOOD: Just triggering conditions, no workflow summary
-description: Use when executing implementation plans with independent tasks in the current session
+# ✅ GOOD: Outcome, then trigger, no workflow summary
+description: Executes implementation plans. Use when a plan has independent tasks to run in the current session
 
-# ✅ GOOD: Triggering conditions only
-description: Use when implementing any feature or bugfix, before writing implementation code
+# ✅ GOOD: Outcome, then trigger
+description: Enforces test-first development. Use when implementing any feature or bugfix, before writing implementation code
 ```
 
 **Content:**
@@ -187,13 +187,13 @@ description: For async testing
 description: I can help you with async tests when they're flaky
 
 # ❌ BAD: Mentions technology but skill isn't specific to it
-description: Use when tests use setTimeout/sleep and are flaky
+description: Fixes flaky tests. Use when tests use setTimeout/sleep and are flaky
 
-# ✅ GOOD: Starts with "Use when", describes problem, no workflow
-description: Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
+# ✅ GOOD: Outcome, then the problem as trigger, no workflow
+description: Stabilizes flaky tests. Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
 
 # ✅ GOOD: Technology-specific skill with explicit trigger
-description: Use when using React Router and handling authentication redirects
+description: Handles authentication redirects in React Router. Use when using React Router and handling authentication redirects
 ```
 
 ### 2. Keyword Coverage
@@ -605,7 +605,7 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 **GREEN Phase - Write Minimal Skill:**
 - [ ] Name uses only letters, numbers, hyphens (no parentheses/special chars)
 - [ ] YAML frontmatter with required `name` and `description` fields (max 1024 chars; see [spec](https://agentskills.io/specification))
-- [ ] Description starts with "Use when..." and includes specific triggers/symptoms
+- [ ] Description reads "<Verb>s <object>. Use when <trigger>." with specific triggers/symptoms
 - [ ] Description written in third person
 - [ ] Keywords throughout for search (errors, symptoms, tools)
 - [ ] Clear overview with core principle
