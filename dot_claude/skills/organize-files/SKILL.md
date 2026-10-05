@@ -1,6 +1,6 @@
 ---
 name: organize-files
-description: Use when asked to organize, sort, tidy, clean up, or declutter a messy folder (e.g. Downloads, a shared drive, a project dump) into subfolders.
+description: Sorts a messy folder into subfolders. Use when asked to organize, tidy, or declutter Downloads, a shared drive, or a project dump.
 ---
 
 # organize-files

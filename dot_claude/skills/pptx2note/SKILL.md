@@ -1,6 +1,6 @@
 ---
 name: pptx2note
-description: Use when asked to extract, dump, pull, or export speaker notes from PowerPoint (.pptx) files into text files — e.g. "extract slide notes from these decks", "get the presenter notes out of this pptx", or when the user runs /pptx2note. Notes extraction only; creating, editing, or otherwise parsing .pptx files belongs to the pptx skill.
+description: Extracts speaker notes from .pptx files into text. Use for notes only; other .pptx work → pptx skill.
 ---
 
 # pptx2note

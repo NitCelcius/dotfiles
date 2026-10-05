@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-scripting
-description: Use when creating or editing C# scripts through MCP for Unity — covers create_script, script_apply_edits, apply_text_edits, validate_script, get_sha, delete_script, find_in_file, and the compile-wait-then-verify cycle after any script change.
+description: Creates or edits C# scripts in Unity. Use for script changes via MCP for Unity.
 ---
 
 # Unity-MCP Script Tools

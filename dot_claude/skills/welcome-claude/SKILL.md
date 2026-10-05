@@ -1,6 +1,6 @@
 ---
 name: welcome-claude
-description: One-time project onboarding — generates or updates CLAUDE.md with commands, architecture, and language-specific conventions. Run once when starting work in a new repository.
+description: Creates or updates a repository's CLAUDE.md. Use once when starting work in a new repository.
 ---
 
 # Welcome Claude

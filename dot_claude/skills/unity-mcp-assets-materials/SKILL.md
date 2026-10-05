@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-assets-materials
-description: Use when managing Unity asset files, prefabs, materials, or textures through MCP for Unity — covers manage_asset (search/create/move/delete), manage_prefabs (headless prefab editing), manage_material (create/color/shader properties), and manage_texture (procedural textures/patterns).
+description: Manages Unity assets, prefabs, materials, and textures. Use for asset work via MCP for Unity.
 ---
 
 # Unity-MCP Asset, Prefab & Material Tools

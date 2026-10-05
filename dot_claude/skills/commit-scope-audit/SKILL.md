@@ -1,6 +1,6 @@
 ---
 name: commit-scope-audit
-description: Use before staging or committing, or before splitting work into multiple commits. Audits git status and already-staged changes first, proposes a commit plan naming exact files, and waits for approval before running git add or git commit. Prevents pre-staged or unrelated files from riding along in a commit.
+description: Agrees on exactly which files go in each commit. Use before staging, committing, or splitting work into commits.
 ---
 
 # Commit Scope Audit

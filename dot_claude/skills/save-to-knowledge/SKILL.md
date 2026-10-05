@@ -1,6 +1,6 @@
 ---
 name: save-to-knowledge
-description: Save a finding, decision, or workflow discovery from this session to the user's Notion "Knowledge(s)" database. Use when the user says "save this to knowledge", "note this in Notion Knowledge(s)", "add this to my knowledge base", or similar. Writes directly with a hard-coded schema and writing-style rules — no need to fetch the database structure or the style-guide pages from Notion first.
+description: Saves a finding or decision to the Notion "Knowledge(s)" database. Use when the user says "save this to knowledge".
 ---
 
 # Save to Notion Knowledge(s)

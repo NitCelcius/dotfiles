@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Use when the task is open-ended design work - creating features, building components, or deciding on approach. Skip if the edit target is already explicit (specific file + specific change stated in the request). Skip also for a long (120+ word), unstructured idea dump that still needs pulling back to purpose - that's hear-my-plan.
+description: Works out a design before building. Use for open-ended features or approach choices; not for explicit edits or long idea dumps (hear-my-plan).
 ---
 
 # Brainstorming Ideas Into Designs

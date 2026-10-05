@@ -1,6 +1,6 @@
 ---
 name: archaeology-fanout
-description: Use for "how does X work" or trace-this-feature investigations in unfamiliar or large code. Sizes the question first, then — only when the material justifies it and the user agrees — fans out parallel subagents across independent lanes (spec/docs, backend, frontend, git history, tests, feature-flag gating) instead of answering from a single sequential read, and reconciles with confidence tags. Pairs with verify-before-claiming for the reconciliation step.
+description: Traces how a feature works across large or unfamiliar code. Use for "how does X work" questions too big for one sequential read.
 ---
 
 # Archaeology Fanout

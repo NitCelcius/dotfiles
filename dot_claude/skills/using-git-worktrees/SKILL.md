@@ -1,6 +1,6 @@
 ---
 name: using-git-worktrees
-description: Use when starting feature or bugfix work that needs isolation - suggests branch name following repo convention, confirms with user, then creates isolated git worktree with proper gitignore handling
+description: Creates an isolated git worktree. Use when starting feature or bugfix work that needs isolation.
 ---
 
 # Using Git Worktrees

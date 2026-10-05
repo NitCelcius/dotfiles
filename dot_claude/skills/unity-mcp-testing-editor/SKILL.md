@@ -1,6 +1,6 @@
 ---
 name: unity-mcp-testing-editor
-description: Use when running Unity tests, controlling editor state (play mode, menu items, tags/layers), or diagnosing compile errors and console output through MCP for Unity — covers run_tests, get_test_job, manage_editor, execute_menu_item, and read_console.
+description: Runs Unity tests, controls editor state, and reads compile errors and the console. Use for that work via MCP for Unity.
 ---
 
 # Unity-MCP Testing & Editor Control Tools

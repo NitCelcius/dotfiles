@@ -1,6 +1,6 @@
 ---
 name: organize-photos
-description: Use when asked to organize a messy photo/media folder by date and archive the result into password-protected 7z files. Two-step pipeline over move.ps1 (sort files into yyyy/MM/dd folders) and GetFoldersAtDepth.ps1 (7z each folder at a chosen depth), with the archive password pulled from Bitwarden via bwbio.
+description: Sorts a photo or media folder by date and archives it into password-protected 7z files. Use when asked to organize photos.
 ---
 
 # Organize Photos by Date, Then Archive
