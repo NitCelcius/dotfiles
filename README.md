@@ -48,7 +48,7 @@ regression scenarios for the global instructions live in
 
 ```sh
 uv run --with pytest pytest -q                                          # quick
-uv run --with pytest pytest -q && chezmoi diff --no-pager ~/.claude     # full, before a commit or PR
+uv run --with pytest pytest -q && chezmoi diff --no-pager --recursive ~/.claude     # full, before a commit or PR
 ```
 
 ## Secrets
