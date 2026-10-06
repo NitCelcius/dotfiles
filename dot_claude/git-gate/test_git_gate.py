@@ -2,12 +2,15 @@
 
 Run: uv run --with pytest pytest dot_claude/git-gate
 
-Covers: silence for a forced delete of a local-only branch and of a fully pushed one,
-`ask` for a remote-backed branch with unpushed commits (found through `cd`, `git -C`,
-the PowerShell tool and a multi-branch delete), `ask` for a branch outside any repo;
-`deny` for a `+refspec` push, `ask` for a `:refspec` or `--delete` push; and under
-`--unattended`, `deny` for each of those and for anything a live `permissions.ask`
-rule matches, with silence for what the gate clears.
+Covers: `allow` for a forced delete of a local-only branch and of a fully pushed one,
+alone or with `cd` and a plain `git worktree remove`, and silence once anything else
+shares the call; `ask` for a remote-backed branch with unpushed commits (found through
+`cd`, `git -C`, the PowerShell tool, a multi-branch delete, abbreviated options and the
+shell wrappers a fuzz run slipped past: `if`, `timeout`, `eval`, here-strings, a pipe
+into `bash`); `ask` when the repo cannot be pinned down and for a branch outside any
+repo; `deny` for a force push, `ask` for a remote delete, `--mirror` or `--prune` push;
+and under `--unattended`, `deny` for each of those and for anything a live
+`permissions.ask` rule matches, with `allow` or silence for what the gate clears.
 """
 
 from __future__ import annotations
@@ -87,8 +90,8 @@ def decision(output: dict | None) -> str | None:
 
 
 @pytest.mark.parametrize("command", ["git branch -D local", "git branch -D pushed", "git branch -d -f local"])
-def test_forced_delete_without_unpushed_remote_work_is_silent(repo: Path, env: dict[str, str], command: str) -> None:
-    assert fire(command, repo, env) is None
+def test_forced_delete_without_unpushed_remote_work_is_allowed(repo: Path, env: dict[str, str], command: str) -> None:
+    assert decision(fire(command, repo, env)) == "allow"
 
 
 def test_remote_backed_branch_with_unpushed_commits_asks(repo: Path, env: dict[str, str]) -> None:
@@ -112,7 +115,7 @@ def test_repo_is_found_through_cd_and_dash_c(repo: Path, env: dict[str, str], tm
     assert decision(fire(command, tmp_path, env)) == "ask"
 
 
-def test_powershell_tool_is_gated_too(repo: Path, env: dict[str, str], tmp_path: Path) -> None:
+def test_powershell_tool_is_gated(repo: Path, env: dict[str, str], tmp_path: Path) -> None:
     command = f'Set-Location "{repo}"; git branch -D ahead'
     assert decision(fire(command, tmp_path, env, tool="PowerShell")) == "ask"
 
@@ -138,11 +141,72 @@ def test_missing_branch_is_left_to_git(repo: Path, env: dict[str, str]) -> None:
         ("git push origin :feat", "ask"),
         ("git push --delete origin feat", "ask"),
         ("git push -d origin feat", "ask"),
+        ("git push --del origin feat", "ask"),
+        ("git push origin main:feat --force", "deny"),
+        ("git push --forc origin main:feat", "deny"),
+        ("git push --force-with-lease origin main:feat", "ask"),
+        ("git push --mirror origin", "ask"),
+        ("git push --prune origin 'refs/heads/*:refs/heads/*'", "ask"),
+        ("git push -o +x origin feat", None),
         ("git push -u origin feat", None),
         ("git push", None),
     ],
 )
 def test_push_refspecs(repo: Path, env: dict[str, str], command: str, expected: str | None) -> None:
+    assert decision(fire(command, repo, env)) == expected
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "if true; then git branch -D ahead; fi",
+        "timeout 10 git branch -D ahead",
+        "{ git branch -D ahead; }",
+        "eval 'git branch -D ahead'",
+        "bash <<< 'git branch -D ahead'",
+        "echo 'git branch -D ahead' | bash",
+        "builtin cd . && git branch -D ahead",
+        "git branch --del --forc ahead",
+        "git branch -D local ahead",
+    ],
+)
+def test_wrapped_or_abbreviated_delete_asks(repo: Path, env: dict[str, str], command: str) -> None:
+    assert decision(fire(command, repo, env)) == "ask"
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        'GIT_DIR="{repo}/.git" git branch -D local',
+        'export GIT_DIR="{repo}/.git"; git branch -D local',
+        'env -C "{repo}" git branch -D local',
+        'git --git-dir="{repo}/.git" branch -D local',
+        'git --work-tree "{repo}" branch -D local',
+        '(cd "{repo}" && git branch -D local)',
+        'pushd "{repo}" && popd && git branch -D local',
+        'cd "$SOMEWHERE" && git branch -D local',
+    ],
+)
+def test_unresolved_repo_asks(repo: Path, env: dict[str, str], tmp_path: Path, template: str) -> None:
+    command = template.format(repo=repo.as_posix())
+    assert decision(fire(command, tmp_path, env)) == "ask"
+
+
+@pytest.mark.parametrize(
+    ("template", "expected"),
+    [
+        ('cd "{repo}" && git branch -D local', "allow"),
+        ('git worktree remove .worktree/x && git -C "{repo}" branch -D local pushed', "allow"),
+        ("git worktree remove --force .worktree/x && git branch -D local", None),
+        ("git status && git branch -D local", None),
+        ("git branch -D local; rm -rf build", None),
+        ("git branch -D no-such-branch", None),
+    ],
+)
+def test_allow_only_when_every_command_is_cleared(
+    repo: Path, env: dict[str, str], template: str, expected: str | None
+) -> None:
+    command = template.format(repo=repo.as_posix())
     assert decision(fire(command, repo, env)) == expected
 
 
@@ -167,9 +231,14 @@ def test_unattended_denies_what_would_prompt(repo: Path, env: dict[str, str], co
     assert "Unattended run" in output["permissionDecisionReason"]
 
 
-@pytest.mark.parametrize("command", ["git branch -D local", "git push -u origin feat", "git rebase origin/main", "ls"])
-def test_unattended_is_silent_on_what_the_gate_clears(repo: Path, env: dict[str, str], command: str) -> None:
-    assert fire(command, repo, env, unattended=True) is None
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [("git branch -D local", "allow"), ("git push -u origin feat", None), ("git rebase origin/main", None), ("ls", None)],
+)
+def test_unattended_passes_what_the_gate_clears(
+    repo: Path, env: dict[str, str], command: str, expected: str | None
+) -> None:
+    assert decision(fire(command, repo, env, unattended=True)) == expected
 
 
 @pytest.mark.parametrize("stdin", ["", "not json", "{}", '{"tool_input": {"command": 5}}'])

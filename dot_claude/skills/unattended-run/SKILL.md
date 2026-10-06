@@ -1,6 +1,6 @@
 ---
 name: unattended-run
-description: Use only when the user explicitly invokes /unattended-run to start work nobody is watching. Turns permission prompts from the git gate and permissions.ask into denials with a reason, and sets what the run may do alone and what it reports.
+description: Runs work nobody is watching without stalling on prompts. Use only when the user explicitly invokes /unattended-run.
 disable-model-invocation: true
 hooks:
   PreToolUse:
@@ -19,8 +19,10 @@ command that would otherwise ask:
 
 - anything a `permissions.ask` rule matches: PR create/merge/close, issue close,
   `reset --hard`, force-with-lease pushes, remote branch deletes
-- `git branch -D` of a branch that is on a remote but has commits on no remote
-- a push with a `+refspec` (force) or a `:refspec` (remote delete)
+- `git branch -D` of a branch that is on a remote but has commits on no remote, or in a
+  repo the hook cannot pin down (`GIT_DIR`, `--git-dir`, `env -C`, a `cd` in a subshell)
+- a force push (`+refspec`, `--force`) or a push that deletes remote branches
+  (`:refspec`, `--delete`, `--mirror`, `--prune`)
 
 ## Rules
 
@@ -33,6 +35,9 @@ command that would otherwise ask:
 - Cleared without asking: WIP commits, a non-force push of the working branch, rebase,
   removing worktrees this run created, and `git branch -D` of a branch that is local-only
   or fully pushed.
+- Move or drop branches only with `git branch -D`. The hook does not check the other ways
+  to overwrite one (`update-ref`, `branch -f`/`-M`/`-C`, `checkout -B`, `switch -C`,
+  `fetch . +a:b`), so whether those prompt depends on the permission mode.
 - Never open a PR: the user reviews it before anything is published. When the work is
   ready for one, run `draft-pr` steps 1–3 and stop there: carry step 2's findings into
   the final report instead of waiting on them, and leave the body in its file and the
