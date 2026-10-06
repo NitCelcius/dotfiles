@@ -13,11 +13,12 @@
 {{- /*   hooks.PreToolUse   — asks before a delete through a link           */ -}}
 {{- /*   hooks.PreToolUse   — asks before deletes through links or shims    */ -}}
 {{- /*   hooks.PreToolUse   — asks on link/shim deletes, denies link globs  */ -}}
-{{- /*   hooks.PreToolUse   — git-gate: asks before a forced branch delete   */ -}}
-{{- /*                       loses unpushed work, gates +/: refspec pushes   */ -}}
+{{- /*   hooks.PreToolUse   — git-gate: allows a forced branch delete it has */ -}}
+{{- /*                       checked, asks when one loses unpushed work,     */ -}}
+{{- /*                       gates force and delete pushes                   */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls,   */ -}}
-{{- /*                       plus rebases and forced branch deletes          */ -}}
+{{- /*                       plus rebases                                    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
 {{- /*   (git rules in allow/deny/ask are mirrored as PowerShell(...) rules) */ -}}
@@ -42,11 +43,10 @@
       "Bash(chezmoi diff *)"
       "Bash(chezmoi source-path *)"
       "Bash(git check-ignore *)" -}}
-{{- /* Local-only history edits. git-gate asks for the one forced delete that  */ -}}
-{{- /* loses work a static rule cannot see: a remote-backed branch's unpushed  */ -}}
-{{- /* commits. Publishing a rebase needs a force push, which stays gated.     */ -}}
+{{- /* Local-only history edits. Publishing a rebase needs a force push, which  */ -}}
+{{- /* stays gated. Forced branch deletes have no rule: git-gate allows the     */ -}}
+{{- /* ones it has checked, so a hook failure falls back to a prompt.          */ -}}
 {{- $gitAllowRules := list
-      "Bash(git branch -D *)"
       "Bash(git rebase*)"
       "Bash(git pull --rebase*)"
       "Bash(git pull -r*)" -}}
@@ -77,6 +77,11 @@
       "Bash(git pull --rebase*)"
       "Bash(git pull -r*)"
       "Bash(git branch -D*)" -}}
+{{- /* Likewise for allow rules: a static allow matched forced deletes the hook  */ -}}
+{{- /* could not see into (`timeout 10 git branch -D x`), so it is dropped.     */ -}}
+{{- $retiredAllowRules := list
+      "Bash(git branch -D *)"
+      "PowerShell(git branch -D *)" -}}
 {{- /* Bash(...) rules never match the PowerShell tool, so mirror the git ones. */ -}}
 {{- range $r := $gitAllowRules -}}
 {{-   $allowRules = append (append $allowRules $r) (replace "Bash(" "PowerShell(" $r) -}}
@@ -89,8 +94,11 @@
 {{- end -}}
 {{- $in := default "{}" (trim .chezmoi.stdin) -}}
 {{- $cfg := fromJson $in -}}
-{{- $liveAllow := default (list) (dig "permissions" "allow" (list) $cfg) -}}
-{{- $cfg = setValueAtPath "permissions.allow" (concat $liveAllow $allowRules | uniq) $cfg -}}
+{{- $keptAllow := list -}}
+{{- range default (list) (dig "permissions" "allow" (list) $cfg) -}}
+{{-   if not (has . $retiredAllowRules) -}}{{- $keptAllow = append $keptAllow . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "permissions.allow" (concat $keptAllow $allowRules | uniq) $cfg -}}
 {{- $liveDeny := default (list) (dig "permissions" "deny" (list) $cfg) -}}
 {{- $cfg = setValueAtPath "permissions.deny" (concat $liveDeny $denyRules | uniq) $cfg -}}
 {{- $keptAsk := list -}}
@@ -175,7 +183,7 @@
 {{- end -}}
 {{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptPre (dict "matcher" "Bash|PowerShell" "hooks" (list $rmHook))) $cfg -}}
 {{- /* Timeout covers a few 5s-capped git calls per deleted branch; a timed-out */ -}}
-{{- /* hook would let a forced delete through on the allow rule.               */ -}}
+{{- /* hook gives no decision, so a forced delete falls back to a prompt.      */ -}}
 {{- $gitGate := printf "%s/.claude/git-gate/git_gate.py" .chezmoi.homeDir -}}
 {{- $gateHook := dict "type" "command" "command" (printf "python \"%s\"" $gitGate) "timeout" 30 -}}
 {{- $keptGate := list -}}
