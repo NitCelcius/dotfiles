@@ -4,7 +4,8 @@ Run: uv run --with pytest pytest dot_claude/rm-junction-guard
 
 Covers: `ask` for each delete form that reaches through a junction (trailing separator,
 glob or subpath under the link, cmd `del /s`, an enumerator piped into a delete, a
-quoted multi-statement script) and for a guarded name (`node_modules`, `.venv`) whose
+quoted multi-statement script, and a delete inside `if`, `timeout`, `nice -n`, `eval`,
+a here-string or a pipe into `bash`) and for a guarded name (`node_modules`, `.venv`) whose
 contents a global shim runs; silence for deleting a link by name, a folder holding a
 link, a project node_modules no shim runs, non-delete commands and malformed input;
 `deny` for a glob or emptying delete over a folder holding links, which
@@ -94,6 +95,13 @@ def work(tmp_path: Path) -> Path:
         ("Get-ChildItem link -Recurse -File | Remove-Item -Force", "PowerShell"),
         ("gci link | ForEach-Object { Remove-Item $_ -Recurse }", "PowerShell"),
         ('powershell -c "Remove-Item plain; Remove-Item link\\*"', "Bash"),
+        ("if true; then rm -rf link/sub; fi", "Bash"),
+        ("timeout 5 rm -rf link/sub", "Bash"),
+        ("nice -n 5 rm -rf link/sub", "Bash"),
+        ("eval 'rm -rf link/sub'", "Bash"),
+        ("bash <<< 'rm -rf link/sub'", "Bash"),
+        ("echo 'rm -rf link/sub' | bash", "Bash"),
+        ('X="a b" rm -rf link/sub', "Bash"),
     ],
 )
 def test_delete_through_junction_asks(work: Path, command: str, tool: str) -> None:
