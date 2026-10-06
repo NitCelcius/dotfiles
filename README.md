@@ -22,6 +22,7 @@ Note, `~/.gitconfig.local` is loaded for machine-specific git config.
 | `dot_claude/` | Claude Code config |
 | `docs/` | Plans and evaluation records for this repo; not deployed |
 | `ci/` | CI-only fixtures such as the mock `bw`; not deployed |
+| `.devcontainer/` | Local sandbox for testing hooks against real git commands: the checkout is mounted read-only and cloned inside, and only the Anthropic API is reachable; not deployed |
 
 ## Claude Code config
 
