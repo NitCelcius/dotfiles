@@ -10,3 +10,4 @@
 .githooks/** text eol=lf
 dot_config/git/executable_sig-summary.sh text eol=lf
 dot_claude/hooks/executable_play-sound.sh text eol=lf
+.devcontainer/*.sh text eol=lf

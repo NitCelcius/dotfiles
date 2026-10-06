@@ -1,0 +1,28 @@
+{
+  // Local sandbox for hook testing: the checkout is mounted read-only and cloned inside,
+  // and after start only the Anthropic API is reachable. The Claude token comes from
+  // `claude setup-token`, saved as CLAUDE_CODE_OAUTH_TOKEN=<token> in the git-ignored
+  // .devcontainer/.env.local.
+  "name": "dotfiles sandbox",
+  "build": { "dockerfile": "Dockerfile" },
+  "runArgs": [
+    "--hostname=dotfiles-sandbox",
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW",
+    "--memory=4g",
+    "--pids-limit=512",
+    "--env-file=${localWorkspaceFolder}/.devcontainer/.env.local"
+  ],
+  "workspaceMount": "source=${localWorkspaceFolder},target=/src,type=bind,readonly",
+  "workspaceFolder": "/home/sandbox/work",
+  "remoteUser": "sandbox",
+  "containerEnv": {
+    "DOTFILES_SANDBOX": "1",
+    "UV_OFFLINE": "1",
+    "DISABLE_AUTOUPDATER": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+  },
+  "postCreateCommand": "bash /src/.devcontainer/post-create.sh",
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}
