@@ -37,18 +37,32 @@ approves the plan.**
    (`_v2`, `_re3`, `_bef`, `_fin`, `_rev`, `(1)`, ` 2`) belong grouped
    together under one folder per document — never treat this as
    duplication to clean up. This skill groups; it does not deduplicate
-   or delete.
+   or delete on its own. Only byte-identical copies (same SHA256 as a
+   copy already filed elsewhere) may be proposed for removal from the
+   source folder, listed one by one for approval. A same-name item whose
+   content differs is never removed: list each full path (source and
+   existing copy) so the user can inspect.
 6. **Anything that doesn't clearly match a category goes in a
    `_needs-review` bucket** — don't force a fit.
 7. **Output the plan**, not the move: a markdown table or tree of
    `category → destination subfolder → files`, with counts per category.
    Flag anything you're unsure about. Also write the plan as a CSV with
-   `Name,Destination` columns (`Name` = item in the source folder,
-   `Destination` = path relative to the destination root). Leave
-   `Destination` blank (or `_needs-review...`) for anything not approved
-   to move — the executor below treats that as "leave in place."
-8. **Only after explicit approval**, execute the moves with
-   `scripts/execute-move.ps1` (`-SourceDir`, `-DestRoot`, `-PlanCsv`) —
+   `Name,Destination,NewName` columns (`Name` = item in the source
+   folder, `Destination` = path relative to the destination root,
+   `NewName` = optional rename, blank to keep the name). Include only
+   rows that will move; items left in place or out of scope stay out of
+   the CSV, and the report says they were left. Propose a `NewName` for
+   opaque names (hash or ID filenames, publisher-ID papers) from the
+   file's own title or first page; follow the destination folder's
+   existing naming (e.g. a course-code prefix) when it has one.
+8. **Only after explicit approval**, first recycle approved
+   byte-identical duplicates with `scripts/recycle-duplicates.ps1`
+   (`-SourceDir`, `-ListCsv` with `Name,SurvivingCopy`; re-hashes both
+   sides, Recycle Bin only), then apply renames with
+   `scripts/apply-renames.ps1` (`-SourceDir`, `-PlanCsv`; writes
+   `<plan>-exec.csv`), then execute the moves with
+   `scripts/execute-move.ps1` (`-SourceDir`, `-DestRoot`, `-PlanCsv` =
+   the `-exec.csv`) —
    don't hand-roll a new mover each time. It never overwrites (same-named
    item at the destination is left alone and reported as a collision,
    not clobbered), and it's resilient: a locked/in-use file is caught and
