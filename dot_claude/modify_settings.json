@@ -18,6 +18,7 @@
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
 {{- /*   syncClaudeAiSkills — false: claude.ai skills stay out of the context  */ -}}
+{{- /*   cleanupPeriodDays  — 9999: session transcripts are kept ~indefinitely */ -}}
 {{- /*   worktree.baseRef   — Workcell executors branch from the current HEAD */ -}}
 {{- /*   permissions.additionalDirectories — the Workcell record root         */ -}}
 {{- /*   hooks.<workcell>   — removed; the Workcell plugin registers its own  */ -}}
@@ -68,6 +69,7 @@
 {{- $liveAsk := default (list) (dig "permissions" "ask" (list) $cfg) -}}
 {{- $cfg = setValueAtPath "permissions.ask" (concat $liveAsk $askRules | uniq) $cfg -}}
 {{- $cfg = setValueAtPath "syncClaudeAiSkills" false $cfg -}}
+{{- $cfg = setValueAtPath "cleanupPeriodDays" 9999 $cfg -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
 {{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
 {{- $cfg = setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook))) $cfg -}}
