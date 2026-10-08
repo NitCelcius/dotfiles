@@ -29,3 +29,8 @@ description: Decides whether and how to hand work to a subagent. Use before any 
   artifact, not against the agent's summary; if a load-bearing claim has no checkable
   artifact, say so rather than passing it through.
 - For dispatching an agent purely to *check* a result, see `verify-before-claiming`.
+- Haiku agents (`haiku-*`) are fast, so for read-only or judgment-free work whose
+  result can be checked against an artifact (locating things, digesting known files
+  with citations, labelling many items against a rubric, running a given observation)
+  one dispatch usually beats several rounds of grep in main. Keep choosing the
+  approach, interpreting results, and edits in main.
