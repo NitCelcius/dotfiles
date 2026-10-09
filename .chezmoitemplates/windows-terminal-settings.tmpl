@@ -1,0 +1,50 @@
+{{- /* Windows Terminal settings, shared by the stable and Preview modify_ files. */ -}}
+{{- /* Partial management. The live file passes through and only these keys are */ -}}
+{{- /* enforced:                                                               */ -}}
+{{- /*   copyOnSelect, useAcrylicInTabRow, snapToGridOnResize                   */ -}}
+{{- /*   keybindings, actions   — replaced wholesale                            */ -}}
+{{- /*   profiles.defaults.font.face — merged; other defaults stay live         */ -}}
+{{- /* profiles.list and defaultProfile depend on this machine and stay live.   */ -}}
+{{- /* Comments in the live file are not kept; Terminal drops them on save too. */ -}}
+{{- $live := fromJsonc (.chezmoi.stdin | default "{}") -}}
+{{- $managed := fromJson `{
+  "copyOnSelect": true,
+  "useAcrylicInTabRow": true,
+  "snapToGridOnResize": false,
+  "actions": [
+    {
+      "command": { "action": "closeTab" },
+      "id": "User.closeTab.0"
+    },
+    {
+      "command": {
+        "action": "globalSummon",
+        "dropdownDuration": 0,
+        "name": "_quake",
+        "toggleVisibility": true,
+        "monitor": "toMouse",
+        "desktop": "toCurrent"
+      },
+      "id": "User.globalSummon"
+    }
+  ],
+  "keybindings": [
+    { "id": "Terminal.CopyToClipboard", "keys": "ctrl+c" },
+    { "id": "Terminal.PasteFromClipboard", "keys": "ctrl+v" },
+    { "id": "Terminal.FindText", "keys": "ctrl+shift+f" },
+    { "id": "Terminal.DuplicatePaneAuto", "keys": "alt+shift+d" },
+    { "id": "User.closeTab.0", "keys": "ctrl+w" },
+    { "id": "User.globalSummon", "keys": "ctrl+alt+." }
+  ]
+}` -}}
+{{- range $key, $value := $managed -}}
+{{-   $_ := set $live $key $value -}}
+{{- end -}}
+{{- $profiles := get $live "profiles" | default dict -}}
+{{- $defaults := get $profiles "defaults" | default dict -}}
+{{- $font := get $defaults "font" | default dict -}}
+{{- $_ := set $font "face" "HackGen Console NF" -}}
+{{- $_ := set $defaults "font" $font -}}
+{{- $_ := set $profiles "defaults" $defaults -}}
+{{- $_ := set $live "profiles" $profiles -}}
+{{- toPrettyJson $live }}
