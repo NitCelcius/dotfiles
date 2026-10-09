@@ -47,12 +47,15 @@ obsidian
 .wslconfig
 {{ end -}}
 
-# Windows Terminal settings only mean something where the app is installed;
-# the modify_ templates would otherwise create the package directory.
+# Windows Terminal settings are managed only once the app has written its own
+# settings.json: a modify_ template on a missing file would create a partial one
+# that stops Terminal from writing its defaults.
 {{ $wtPackages := joinPath .chezmoi.homeDir "AppData/Local/Packages" -}}
-{{ if or (ne .chezmoi.os "windows") (not (stat (joinPath $wtPackages "Microsoft.WindowsTerminal_8wekyb3d8bbwe"))) -}}
-AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe
+{{ $wtStable := "Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json" -}}
+{{ $wtPreview := "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json" -}}
+{{ if or (ne .chezmoi.os "windows") (not (stat (joinPath $wtPackages $wtStable))) -}}
+AppData/Local/Packages/{{ $wtStable }}
 {{ end -}}
-{{ if or (ne .chezmoi.os "windows") (not (stat (joinPath $wtPackages "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe"))) -}}
-AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe
+{{ if or (ne .chezmoi.os "windows") (not (stat (joinPath $wtPackages $wtPreview))) -}}
+AppData/Local/Packages/{{ $wtPreview }}
 {{ end -}}
