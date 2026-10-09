@@ -1,0 +1,89 @@
+# Path -> area label map for actions/labeler (.github/workflows/labels.yml).
+# A PR gets every area whose globs match a changed file.
+"area:claude":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_claude/**
+          - .claude-plugin/**
+
+# A new hook directory under dot_claude needs adding here by hand.
+"area:hooks":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_claude/hooks/**
+          - dot_claude/git-gate/**
+          - dot_claude/rm-junction-guard/**
+          - dot_claude/verify-on-stop/**
+          - dot_claude/session-start-diff/**
+          - dot_claude/dotfiles-change-log/**
+          - dot_claude/feedback-on-compaction/**
+
+"area:settings":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_claude/modify_settings.json
+          - dot_claude/keybindings.json
+          - dot_claude/themes/**
+          - dot_claude/executable_statusline.sh
+
+"area:instructions":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_claude/CLAUDE.md
+          - dot_codex/AGENTS.md
+
+"area:skills":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_claude/skills/**
+          - dot_codex/skills/**
+
+"area:agents":
+  - changed-files:
+      - any-glob-to-any-file: dot_claude/agents/**
+
+"area:codex":
+  - changed-files:
+      - any-glob-to-any-file: dot_codex/**
+
+"area:git":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_config/git/**
+          - modify_dot_gitconfig
+          - .githooks/**
+          - .gitattributes
+          - .gitignore
+
+"area:shell":
+  - changed-files:
+      - any-glob-to-any-file:
+          - dot_zshrc
+          - dot_p10k.zsh
+          - dot_inputrc
+          - dot_nanorc
+          - readonly_Documents/PowerShell/**
+
+"area:editor":
+  - changed-files:
+      - any-glob-to-any-file:
+          - AppData/Roaming/Zed/**
+          - .vscode/**
+          - obsidian/**
+
+"area:chezmoi":
+  - changed-files:
+      - any-glob-to-any-file:
+          - .chezmoi*
+          - dot_config/mise/**
+          - dot_local/**
+
+"area:devcontainer":
+  - changed-files:
+      - any-glob-to-any-file: .devcontainer/**
+
+"area:ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - ci/**

@@ -1,0 +1,93 @@
+# Source of truth for the repo's GitHub labels; ci/sync_labels.py applies it.
+# `from` renames an existing label in place so its PRs and issues keep it.
+# Type labels follow the commit prefix, area labels follow the changed paths
+# (.github/labeler.yml); state and OS labels are set by hand. GitHub itself shows
+# whether a PR is a draft.
+
+# Type
+- name: feat
+  color: a2eeef
+  description: New feature or capability
+  from: enhancement
+- name: fix
+  color: d73a4a
+  description: Something was broken and is now repaired
+  from: bug
+- name: refactor
+  color: fbca04
+  description: Restructures code without changing behaviour
+- name: docs
+  color: 0075ca
+  description: Documentation, skill descriptions, PR-body rules
+  from: documentation
+- name: chore
+  color: bfd4f2
+  description: Tracking files, tooling, housekeeping
+
+# Area
+- name: "area:claude"
+  color: d4c5f9
+  description: Anything under dot_claude
+- name: "area:hooks"
+  color: d4c5f9
+  description: Hooks and guards (git-gate, rm-junction-guard, verify-on-stop, ...)
+- name: "area:settings"
+  color: d4c5f9
+  description: Claude settings, keybindings, themes and statusline
+- name: "area:instructions"
+  color: d4c5f9
+  description: Global Claude and Codex instructions (CLAUDE.md, AGENTS.md)
+- name: "area:skills"
+  color: d4c5f9
+  description: Claude and Codex skills
+- name: "area:agents"
+  color: d4c5f9
+  description: Claude subagent definitions
+- name: "area:codex"
+  color: c2e0c6
+  description: Codex config and skills
+- name: "area:git"
+  color: c2e0c6
+  description: Git config, hooks, signing
+- name: "area:shell"
+  color: c2e0c6
+  description: PowerShell, zsh, inputrc, nanorc
+- name: "area:editor"
+  color: c2e0c6
+  description: Zed, VS Code, Obsidian
+- name: "area:chezmoi"
+  color: c2e0c6
+  description: chezmoi config, ignore and templating
+- name: "area:devcontainer"
+  color: c2e0c6
+  description: Hook-testing sandbox container
+- name: "area:ci"
+  color: c2e0c6
+  description: GitHub workflows and CI mocks
+
+# State
+- name: Self-Review failing
+  color: c82f17
+  description: Self-review found problems to fix
+- name: Self-Review accepted
+  color: 86da48
+  description: Self-review passed
+- name: "state:blocked"
+  color: b60205
+  description: Waiting on something outside this PR
+
+# OS
+- name: "os:windows"
+  color: 1d76db
+  description: Affects Windows, including its WSL config
+- name: "os:linux"
+  color: 1d76db
+  description: Affects Linux
+
+# Housekeeping
+- name: duplicate
+  color: cfd3d7
+  description: This issue or pull request already exists
+- name: wontfix
+  color: ffffff
+  description: This will not be worked on
