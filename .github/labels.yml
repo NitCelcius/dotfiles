@@ -1,7 +1,8 @@
 # Source of truth for the repo's GitHub labels; ci/sync_labels.py applies it.
 # `from` renames an existing label in place so its PRs and issues keep it.
 # Type labels follow the commit prefix, area labels follow the changed paths
-# (.github/labeler.yml), state labels follow draft status (.github/workflows/labels.yml).
+# (.github/labeler.yml); state and OS labels are set by hand. GitHub itself shows
+# whether a PR is a draft.
 
 # Type
 - name: feat
@@ -59,12 +60,6 @@
   description: GitHub workflows and CI mocks
 
 # State
-- name: "state:draft"
-  color: ededed
-  description: Draft PR, still being worked on
-- name: "state:needs-review"
-  color: 0e8a16
-  description: Ready for review
 - name: Self-Review failing
   color: c82f17
   description: Self-review found problems to fix
@@ -75,10 +70,15 @@
   color: b60205
   description: Waiting on something outside this PR
 
-# Housekeeping
-- name: windows-only
+# OS
+- name: "os:windows"
   color: 1d76db
-  description: Only applies on Windows or WSL
+  description: Affects Windows, including its WSL config
+- name: "os:linux"
+  color: 1d76db
+  description: Affects Linux
+
+# Housekeeping
 - name: duplicate
   color: cfd3d7
   description: This issue or pull request already exists
