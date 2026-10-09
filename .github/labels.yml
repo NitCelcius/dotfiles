@@ -65,14 +65,12 @@
 - name: "state:needs-review"
   color: 0e8a16
   description: Ready for review
-- name: "state:changes-needed"
+- name: Self-Review failing
   color: c82f17
-  description: Review found problems to fix
-  from: Self-Review failing
-- name: "state:accepted"
+  description: Self-review found problems to fix
+- name: Self-Review accepted
   color: 86da48
-  description: Review passed
-  from: Self-Review accepted
+  description: Self-review passed
 - name: "state:blocked"
   color: b60205
   description: Waiting on something outside this PR
