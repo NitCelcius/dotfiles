@@ -28,12 +28,18 @@
 - name: "area:claude"
   color: d4c5f9
   description: Anything under dot_claude
-- name: "area:claude-hooks"
+- name: "area:hooks"
   color: d4c5f9
   description: Hooks and guards (git-gate, rm-junction-guard, verify-on-stop, ...)
+- name: "area:settings"
+  color: d4c5f9
+  description: Claude settings, keybindings, themes and statusline
+- name: "area:instructions"
+  color: d4c5f9
+  description: Global Claude and Codex instructions (CLAUDE.md, AGENTS.md)
 - name: "area:skills"
   color: d4c5f9
-  description: Claude skills
+  description: Claude and Codex skills
 - name: "area:agents"
   color: d4c5f9
   description: Claude subagent definitions
