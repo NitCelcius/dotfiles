@@ -46,3 +46,13 @@ obsidian
 {{ if ne .chezmoi.os "windows" -}}
 .wslconfig
 {{ end -}}
+
+# Windows Terminal settings only mean something where the app is installed;
+# the modify_ templates would otherwise create the package directory.
+{{ $wtPackages := joinPath .chezmoi.homeDir "AppData/Local/Packages" -}}
+{{ if or (ne .chezmoi.os "windows") (not (stat (joinPath $wtPackages "Microsoft.WindowsTerminal_8wekyb3d8bbwe"))) -}}
+AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe
+{{ end -}}
+{{ if or (ne .chezmoi.os "windows") (not (stat (joinPath $wtPackages "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe"))) -}}
+AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe
+{{ end -}}
