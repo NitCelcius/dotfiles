@@ -37,6 +37,7 @@ an edit to the deployed copy is reverted by the next apply.
 | `dot_claude/session-start-diff/` | SessionStart hook reporting uncommitted changes in the session's repo |
 | `dot_claude/rm-junction-guard/` | PreToolUse hook that asks before a delete that reaches through a junction or symlink, or removes what a global shim runs, and denies a glob over links until the command sets `DELETE_IT_ANYWAY=1` |
 | `dot_claude/dotfiles-change-log/` | PostToolUse and SessionStart hooks that prompt Claude to log the why of each dotfiles commit to the Notion change log |
+| `dot_claude/git-gate/` | PreToolUse hook that allows a forced `git branch -D` it has checked, asks before one drops unpushed commits of a remote-backed branch, and gates force and delete pushes; with `--unattended` (the `unattended-run` skill) it denies whatever would ask |
 
 The `modifying-dotfiles` skill governs changes to this repo: branch first, edit the
 source, keep private detail out, and log the reason for each change in Notion.

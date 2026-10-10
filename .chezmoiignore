@@ -24,6 +24,7 @@
 .claude/session-start-diff/test_session_start_diff.py
 .claude/rm-junction-guard/test_rm_junction_guard.py
 .claude/dotfiles-change-log/test_dotfiles_change_log.py
+.claude/git-gate/test_git_gate.py
 
 # Project instructions and test config for working on this repo, not files for the
 # home directory.

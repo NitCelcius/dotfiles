@@ -50,7 +50,17 @@ CMD_CONTENT_VERBS = frozenset({"del", "erase"})  # under cmd they empty a direct
 CMD_SWITCH_VERBS = frozenset({"del", "erase", "rd"})  # take /s, /q; rmdir only under cmd
 ENUMERATORS = frozenset({"get-childitem", "gci", "ls", "dir", "find"})
 SHELLS = frozenset({"bash", "sh", "zsh", "pwsh", "powershell"})
-WRAPPERS = frozenset({"sudo", "command", "exec", "nice", "time", "env", "xargs"})
+WRAPPERS = frozenset({"sudo", "command", "exec", "nice", "time", "env", "xargs", "timeout", "builtin"})
+# Wrapper options whose value is the next word (`nice -n 5 rm`, `env -C dir rm`).
+WRAPPER_VALUE_OPTIONS = {
+    "nice": frozenset({"-n", "--adjustment"}),
+    "env": frozenset({"-C", "--chdir", "-u", "--unset"}),
+    "timeout": frozenset({"-s", "--signal", "-k", "--kill-after"}),
+}
+WRAPPER_OPERANDS = {"timeout": 1}  # `timeout 10 rm ...`: the duration precedes the command
+KEYWORDS = frozenset({"if", "then", "else", "elif", "while", "until", "do", "!"})
+HERE_STRING = "<<<"  # `bash <<< 'script'`
+PIPE_FEEDERS = frozenset({"echo", "printf"})  # `echo 'script' | bash`
 VALUE_PARAMS = frozenset({"-include", "-exclude", "-filter", "-depth"})
 
 # Cheap pre-filter for the common case; the lexer below does the real work.
@@ -114,9 +124,16 @@ def pipelines(command: str) -> list[list[list[Command]]]:
     pipeline: list[list[Command]] = []
     stage: list[Command] = []
     command_words: Command = []
-    for dq, sq, op, bare in TOKEN.findall(command):
+    word_end = -1
+    for match in TOKEN.finditer(command):
+        dq, sq, op, bare = match.groups()
         if not op:
-            command_words.append((not bare, bare or dq or sq))
+            word: Word = (not bare, bare or dq or sq or "")
+            if command_words and match.start() == word_end:  # `X="a b"` is one word
+                quoted, text = command_words.pop()
+                word = (quoted and word[0], text + word[1])
+            command_words.append(word)
+            word_end = match.end()
             continue
         if command_words:
             stage.append(command_words)
@@ -145,26 +162,54 @@ def rejoin(words: Command) -> str:
 
 
 def unwrap(words: Command, under_cmd: bool) -> tuple[str, Command, str | None, bool]:
-    """(verb, args, nested script, under_cmd) after dropping `sudo`, `xargs -0`, `X=1` and the like."""
+    """(verb, args, nested script, under_cmd) after dropping `sudo`, `xargs -0`, `X=1`, `if` and the like."""
     while words:
         quoted, text = words[0]
-        if not quoted and ASSIGNMENT.match(text):
+        if not quoted and (ASSIGNMENT.match(text) or text in KEYWORDS):
             words = words[1:]
             continue
-        if verb_of(text) not in WRAPPERS:
+        wrapper = verb_of(text)
+        if wrapper not in WRAPPERS:
             break
         words = words[1:]
+        value_options = WRAPPER_VALUE_OPTIONS.get(wrapper, frozenset())
         while words and (words[0][1].startswith("-") or "=" in words[0][1]):
-            words = words[1:]
+            words = words[2:] if words[0][1] in value_options else words[1:]
+        words = words[WRAPPER_OPERANDS.get(wrapper, 0) :]
     if not words:
         return "", [], None, under_cmd
     verb, args = verb_of(words[0][1]), words[1:]
+    if verb == "eval":
+        return verb, [], rejoin(args), under_cmd
     for i, (quoted, text) in enumerate(args):
         if verb == "cmd" and text.lower() in ("/c", "/k"):
             return verb, [], rejoin(args[i + 1 :]), True
         if verb in SHELLS and not quoted and SCRIPT_FLAG.match(text):
             return verb, [], rejoin(args[i + 1 :]), False
+        if verb in SHELLS and not quoted and text.startswith(HERE_STRING):
+            script = text[len(HERE_STRING) :] or (args[i + 1][1] if i + 1 < len(args) else "")
+            return verb, [], script, False
     return verb, args, None, under_cmd
+
+
+def stage_commands(pipeline: list[list[Command]], under_cmd: bool) -> list[tuple[int, str, Command, str | None, bool]]:
+    """(stage index, verb, args, nested script, under_cmd) per command of a pipeline.
+
+    A shell fed by `echo`/`printf` in the stage before (`echo 'rm -rf x' | bash`) runs
+    the echoed text, so that text becomes its nested script.
+    """
+    found: list[tuple[int, str, Command, str | None, bool]] = []
+    fed: str | None = None
+    for index, stage in enumerate(pipeline):
+        piped, fed = fed, None
+        for words in stage:
+            verb, args, nested, nested_under_cmd = unwrap(words, under_cmd)
+            if nested is None and piped is not None and verb in SHELLS and not positional(args, switches=False):
+                nested, nested_under_cmd = piped, False
+            if verb in PIPE_FEEDERS:
+                fed = " ".join(text for quoted, text in args if quoted or not text.startswith("-"))
+            found.append((index, verb, args, nested, nested_under_cmd))
+    return found
 
 
 def positional(args: Command, switches: bool) -> list[str]:
@@ -221,16 +266,14 @@ def operands(command: str, under_cmd: bool = False) -> list[tuple[str, Reach]]:
     for pipeline in pipelines(command):
         sources: list[tuple[int, str]] = []
         last_delete_stage = -1
-        for index, stage in enumerate(pipeline):
-            for words in stage:
-                verb, args, nested, nested_under_cmd = unwrap(words, under_cmd)
-                if nested is not None:
-                    found.extend(operands(nested, nested_under_cmd))
-                elif verb in DELETE_VERBS:
-                    found.extend(delete_operands(verb, args, nested_under_cmd))
-                    last_delete_stage = index
-                elif verb in ENUMERATORS:
-                    sources.extend((index, path) for path in enumerated_paths(verb, args))
+        for index, verb, args, nested, nested_under_cmd in stage_commands(pipeline, under_cmd):
+            if nested is not None:
+                found.extend(operands(nested, nested_under_cmd))
+            elif verb in DELETE_VERBS:
+                found.extend(delete_operands(verb, args, nested_under_cmd))
+                last_delete_stage = index
+            elif verb in ENUMERATORS:
+                sources.extend((index, path) for path in enumerated_paths(verb, args))
         # A delete fed by an enumerator removes what the enumerator listed inside its path.
         found.extend((path, Reach.EMPTIES) for index, path in sources if index < last_delete_stage)
     return found
