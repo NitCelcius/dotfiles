@@ -17,6 +17,8 @@
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls    */ -}}
 {{- /*   permissions.deny   — blocks bare force-push outright                */ -}}
 {{- /*   permissions.ask    — approval gate for irreversible git/gh actions  */ -}}
+{{- /*                       and for pnpm/uv package installs, build-script  */ -}}
+{{- /*                       approval and pnpm-workspace.yaml edits          */ -}}
 {{- /*   syncClaudeAiSkills — false: claude.ai skills stay out of the context  */ -}}
 {{- /*   worktree.baseRef   — Workcell executors branch from the current HEAD */ -}}
 {{- /*   permissions.additionalDirectories — the Workcell record root         */ -}}
@@ -58,7 +60,20 @@
       "Bash(git branch -D*)"
       "Bash(git push origin --delete*)"
       "Bash(gh pr close*)"
-      "Bash(gh issue close*)" -}}
+      "Bash(gh issue close*)"
+      "Bash(pnpm approve*)"
+      "Bash(pnpm add*)"
+      "Bash(pnpm dlx*)"
+      "Bash(pnpm install *)"
+      "Bash(pnpm i *)"
+      "Bash(pnpm config set*)"
+      "Edit(**/pnpm-workspace.yaml)"
+      "Bash(uv add*)"
+      "Bash(uv pip install*)"
+      "Bash(uv tool install*)"
+      "Bash(uv lock --upgrade*)"
+      "Bash(uv run --with*)"
+      "Bash(uvx*)" -}}
 {{- $in := default "{}" (trim .chezmoi.stdin) -}}
 {{- $cfg := fromJson $in -}}
 {{- $liveAllow := default (list) (dig "permissions" "allow" (list) $cfg) -}}

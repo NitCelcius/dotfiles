@@ -3,6 +3,11 @@
 - Run Python via `uv run python`, not `python3` directly
 - Install Python packages via `uv add <pkg>` (CLI), not by editing `pyproject.toml` directly — exception: when a specific version constraint is needed, edit the file
 - Use `git mv` for all file/directory moves to preserve history
+- Installing a package needs my permission each time — `pnpm add`/`dlx`/`install <pkg>`,
+  `uv add`/`uvx`/`uv run --with`/`uv pip install`/`uv tool install`/`uv lock --upgrade`.
+  Name the package and why before running it. Never get around a refused or pending
+  prompt by editing `pnpm-workspace.yaml` build approvals, `pnpm config set`, or
+  new `pyproject.toml` dependencies; ask me instead.
 
 ## Environment
 
