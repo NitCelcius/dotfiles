@@ -12,6 +12,10 @@ case "$1 $2" in
         "fingerprint": "SHA256:dummyfingerprint",
         "privateKey": ""
       },
+      "login": {
+        "username": "",
+        "password": "phc_DUMMY_CI_TOKEN_FOR_TEMPLATE_TESTING_ONLY"
+      },
       "fields": [
         { "name": "ssh_public_key", "value": "ssh-ed25519 AAAAAAAAAAAAAAAAAAAAAAAAAAA_DUMMY_CI_KEY_FOR_TEMPLATE_TESTING_ONLY" }
       ]
