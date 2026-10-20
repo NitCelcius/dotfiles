@@ -22,6 +22,8 @@
 {{- /*   worktree.baseRef   — Workcell executors branch from the current HEAD */ -}}
 {{- /*   permissions.additionalDirectories — the Workcell record root         */ -}}
 {{- /*   hooks.<workcell>   — removed; the Workcell plugin registers its own  */ -}}
+{{- /*   env.CLAUDE_CODE_ENABLE_TELEMETRY, env.OTEL_* — OTLP export to PostHog */ -}}
+{{- /*                       Logs/Metrics; token comes from Bitwarden        */ -}}
 {{- /* model, effortLevel, modelSettings and voice are deliberately left     */ -}}
 {{- /* alone: they are per-session choices, not configuration.              */ -}}
 {{- $keepOn := list "notion@claude-plugins-official" -}}
@@ -70,6 +72,20 @@
 {{- $cfg = setValueAtPath "permissions.ask" (concat $liveAsk $askRules | uniq) $cfg -}}
 {{- $cfg = setValueAtPath "syncClaudeAiSkills" false $cfg -}}
 {{- $cfg = setValueAtPath "cleanupPeriodDays" 9999 $cfg -}}
+{{- /* Telemetry. Prompt text stays out: OTEL_LOG_USER_PROMPTS is left unset. */ -}}
+{{- $phToken := (bitwarden "item" "posthog / claude code / Project token").login.password -}}
+{{- $otelEnv := dict
+      "CLAUDE_CODE_ENABLE_TELEMETRY" "1"
+      "OTEL_LOGS_EXPORTER" "otlp"
+      "OTEL_METRICS_EXPORTER" "otlp"
+      "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL" "http/protobuf"
+      "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL" "http/protobuf"
+      "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT" "https://us.i.posthog.com/i/v1/logs"
+      "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT" "https://us.i.posthog.com/i/v1/metrics"
+      "OTEL_EXPORTER_OTLP_HEADERS" (printf "Authorization=Bearer %s" $phToken) -}}
+{{- range $k, $v := $otelEnv -}}
+{{-   $cfg = setValueAtPath (printf "env.%s" $k) $v $cfg -}}
+{{- end -}}
 {{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
 {{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
 {{- $cfg = setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook))) $cfg -}}
