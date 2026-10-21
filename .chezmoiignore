@@ -47,9 +47,7 @@ obsidian
 .wslconfig
 {{ end -}}
 
-# Windows Terminal settings are managed only once the app has written its own
-# settings.json: a modify_ template on a missing file would create a partial one
-# that stops Terminal from writing its defaults.
+# A modify_ template creates settings.json when it is missing.
 {{ $wtPackages := joinPath .chezmoi.homeDir "AppData/Local/Packages" -}}
 {{ $wtStable := "Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json" -}}
 {{ $wtPreview := "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json" -}}
