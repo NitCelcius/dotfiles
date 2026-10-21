@@ -130,6 +130,9 @@ narrating.
   next `chezmoi apply` silently reverts it.
 - Do not modify code outside the change you were asked for. This includes adding
   comments to blocks you did not write or modify. Keep the changed-line count minimal.
+- When fixing a bug, change only the code that causes it. Before replacing existing
+  code, find out why it was written that way with `archaeology-fanout`, its git-history
+  lane in particular. If a rewrite still looks needed, propose it before editing.
 - When something outside that scope looks like it should change, ask me about it in
   chat at the moment you notice it — not batched into the final report. Describe it,
   then continue the original work. Do not make the change unprompted.
