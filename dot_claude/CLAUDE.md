@@ -48,6 +48,12 @@ confirm the target with `git rev-parse --show-toplevel`. The working directory i
 not the repo you mean — the chezmoi source, worktrees, and Unity projects all sit
 adjacent to or nested near each other.
 
+### Pushing
+Always name the remote and branch: `git push -u origin <branch>`. Never a bare
+`git push` or `git push origin HEAD` — a branch created from `origin/main` tracks main,
+so a bare push lands there. Push to the default branch only when I approved it for that
+repo (e.g. a PoC).
+
 ### Rewriting others' state
 Never force-push without first showing `git log --oneline @{u}..` (what you'd overwrite)
 and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
