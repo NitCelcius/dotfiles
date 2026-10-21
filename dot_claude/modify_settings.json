@@ -16,6 +16,7 @@
 {{- /*   hooks.PreToolUse   — git-gate: allows a forced branch delete it has */ -}}
 {{- /*                       checked, asks when one loses unpushed work,     */ -}}
 {{- /*                       gates force and delete pushes                   */ -}}
+{{- /*   hooks.PreToolUse   — denies heredocs piped into Python's stdin      */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls,   */ -}}
 {{- /*                       plus rebases                                    */ -}}
@@ -191,6 +192,13 @@
 {{-   if not (contains "git_gate.py" (toJson .)) -}}{{- $keptGate = append $keptGate . -}}{{- end -}}
 {{- end -}}
 {{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptGate (dict "matcher" "Bash|PowerShell" "hooks" (list $gateHook))) $cfg -}}
+{{- $heredocGuard := printf "%s/.claude/heredoc-stdin-guard/heredoc_stdin_guard.py" .chezmoi.homeDir -}}
+{{- $heredocHook := dict "type" "command" "command" (printf "python \"%s\"" $heredocGuard) "timeout" 10 -}}
+{{- $keptHeredoc := list -}}
+{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
+{{-   if not (contains "heredoc_stdin_guard.py" (toJson .)) -}}{{- $keptHeredoc = append $keptHeredoc . -}}{{- end -}}
+{{- end -}}
+{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptHeredoc (dict "matcher" "Bash" "hooks" (list $heredocHook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
