@@ -31,12 +31,18 @@ into six agents.
    to hold a rationale, means this is a sequential read: do it inline and go to
    step 4.
 3. If a fanout still earns its cost, state the lane count and what each lane will
-   cover, and get a go-ahead before launching. Then launch them as parallel Agent
-   calls in one message. Each must return file:line evidence, not summaries
+   cover. Run lanes on the Haiku agents wherever they can do the job:
+   `haiku-observer` for the git-history lane, `haiku-finder` and `haiku-reader` for
+   code and doc lanes. They start without CLAUDE.md, so each task names the exact
+   commands or paths, and asks for the answer plus the lines it rests on rather than
+   raw output. Judging and reconciling stay in main. When every lane runs on a Haiku
+   agent, launch without a go-ahead; otherwise get one first. Then launch them as
+   parallel Agent calls in one message. Each must return file:line evidence, not summaries
    without citations. Do not let lanes see each other's conclusions before they
    finish — that's what prevents one lane's guess from contaminating another's
    independent read.
-4. Reconcile in a synthesis pass. Tag every claim:
+4. Reconcile in a synthesis pass. Check each SHA or file:line a conclusion rests on
+   yourself before building on it. Tag every claim:
    - `VERIFIED-CODE` — read the path end to end
    - `VERIFIED-RUNTIME` — actually executed/observed it
    - `INFERRED` — code reading suggests this, not run (see `verify-before-claiming`)
