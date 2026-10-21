@@ -1,11 +1,3 @@
-{{- /* Windows Terminal settings, shared by the stable and Preview modify_ files. */ -}}
-{{- /* Partial management. The live file passes through and only these keys are */ -}}
-{{- /* enforced:                                                               */ -}}
-{{- /*   copyOnSelect, useAcrylicInTabRow, snapToGridOnResize                   */ -}}
-{{- /*   keybindings, actions   — replaced wholesale                            */ -}}
-{{- /*   profiles.defaults.font.face — merged; other defaults stay live         */ -}}
-{{- /* profiles.list and defaultProfile depend on this machine and stay live.   */ -}}
-{{- /* Comments in the live file are not kept; Terminal drops them on save too. */ -}}
 {{- $live := fromJsonc (.chezmoi.stdin | default "{}") -}}
 {{- $managed := fromJson `{
   "copyOnSelect": true,
