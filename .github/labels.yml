@@ -58,12 +58,16 @@
 - name: "area:chezmoi"
   color: c2e0c6
   description: chezmoi config, ignore and templating
+- name: "area:mise"
+  color: c2e0c6
+  description: mise tool versions
 - name: "area:devcontainer"
   color: c2e0c6
   description: Hook-testing sandbox container
-- name: "area:ci"
+- name: "area:github"
   color: c2e0c6
-  description: GitHub workflows and CI mocks
+  description: GitHub workflows, templates, repo config and CI scripts
+  from: "area:ci"
 
 # State
 - name: Self-Review failing
