@@ -1,5 +1,4 @@
 # Path -> area label map for actions/labeler (.github/workflows/labels.yml).
-# A PR gets every area whose globs match a changed file.
 "area:claude":
   - changed-files:
       - any-glob-to-any-file:
@@ -37,6 +36,7 @@
       - any-glob-to-any-file:
           - dot_claude/skills/**
           - dot_codex/skills/**
+          - dot_local/bin/*workcell*
 
 "area:agents":
   - changed-files:
@@ -75,14 +75,16 @@
   - changed-files:
       - any-glob-to-any-file:
           - .chezmoi*
-          - dot_config/mise/**
-          - dot_local/**
+
+"area:mise":
+  - changed-files:
+      - any-glob-to-any-file: dot_config/mise/**
 
 "area:devcontainer":
   - changed-files:
       - any-glob-to-any-file: .devcontainer/**
 
-"area:ci":
+"area:github":
   - changed-files:
       - any-glob-to-any-file:
           - .github/**
