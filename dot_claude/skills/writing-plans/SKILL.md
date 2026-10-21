@@ -26,6 +26,7 @@ Before defining tasks, map out which files will be created or modified and what 
 - Design units with clear boundaries. Each file has one clear responsibility.
 - Files that change together should live together.
 - In existing codebases, follow established patterns.
+- Before planning a hand-written loop, parser or I/O routine, check whether the standard library or an existing dependency already does it.
 
 ## Code Examples
 
