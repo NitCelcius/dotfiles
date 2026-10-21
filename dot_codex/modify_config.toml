@@ -6,7 +6,7 @@
 {{- /* Those are carried over from the live file instead of being       */ -}}
 {{- /* owned/committed here; everything else is owned below.            */ -}}
 {{- $live := fromToml (.chezmoi.stdin | default "") -}}
-{{- $scalars := pick $live "model" "model_reasoning_effort" "notify" "approvals_reviewer" "personality" "plan_mode_reasoning_effort" -}}
+{{- $scalars := pick $live "model" "model_reasoning_effort" "notify" "approvals_reviewer" "personality" "plan_mode_reasoning_effort" "web_search" -}}
 {{- $tables := dict -}}
 {{- if hasKey $live "mcp_servers" -}}
 {{-   $mcp := get $live "mcp_servers" -}}
