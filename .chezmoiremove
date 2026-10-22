@@ -6,3 +6,5 @@
 .claude/skills/executing-delegated-task
 .claude/skills/workcell-delegate
 .claude/skills/using-skills
+# Replaced by .claude/skills/friction, which writes to the same Notion database.
+.claude/skills/log-skill-miss

@@ -30,10 +30,12 @@
 CLAUDE.md
 pytest.ini
 
-# Repository-only material: docs and plans, the repo README, and the CI mock of `bw`.
+# Repository-only material: docs and plans, the repo README, the CI mock of `bw`, and
+# maintenance tools run from the checkout.
 README.md
 docs
 ci
+tools
 
 # Running the hook or its test from the source tree leaves bytecode behind, and
 # chezmoi would otherwise deploy it.
