@@ -18,8 +18,12 @@ Leave out:
   record of it, not the body
 - checks of local state (`.trash`, `chezmoi status`, the session's skill list)
 - commit signing state (signed or not) — signing is reconciled with the user in chat
+- the author's personal reasons for leaving something out — readers of a public
+  repo do not need them
+- a check that the filesystem or repo layout already guarantees, such as unique
+  skill names (two skills cannot share a directory)
 
-A check any machine can repeat, such as "no duplicate `name:` across the skills", stays.
+A check any machine can repeat stays when nothing already guarantees it.
 If something local still matters, tell the user in chat instead.
 
 ## Shape
