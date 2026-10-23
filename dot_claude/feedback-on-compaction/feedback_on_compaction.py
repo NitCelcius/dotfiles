@@ -209,22 +209,30 @@ def report(scope: str, cwd: Path) -> int:
     print()
     print("## Recent events")
     print()
-    print("| Date | Trigger | Pre → post | Later requests | Break-even | Outcome |")
-    print("|---|---|---:|---:|---:|---|")
+    print("| Date | Trigger | Pre → post | Later requests | Back to pre size | Tool results after | Re-read | Break-even (worst) | Outcome |")
+    print("|---|---|---:|---:|---:|---:|---:|---:|---|")
     for event in reversed(events[-10:]):
         date = event.timestamp[:10] or "unknown"
         before_after = f"{token_count(event.pre_tokens)} → {token_count(event.post_tokens)}"
+        back_to_pre = str(event.requests_to_pre_size) if event.requests_to_pre_size > 0 else "—"
+        tool_after = token_count(event.tool_tokens_after_est)
+        reread = token_count(event.reread_tokens_est)
         if event.requests_observed == 0 or not math.isfinite(event.break_even_requests):
             break_even = "—"
             outcome = "not yet measurable"
         else:
-            break_even = f"{event.break_even_requests:.1f}"
+            break_even = f"{event.break_even_requests:.1f} ({event.break_even_requests_summary_uncached:.1f})"
             outcome = "recovered" if event.requests_observed >= event.break_even_requests else "not recovered"
-        print(f"| {date} | {event.trigger} | {before_after} | {event.requests_observed} | {break_even} | {outcome} |")
+        print(
+            f"| {date} | {event.trigger} | {before_after} | {event.requests_observed} | {back_to_pre} | "
+            f"{tool_after} | {reread} | {break_even} | {outcome} |"
+        )
     print()
     print("## Interpretation limits")
     print()
     print("Break-even uses API-equivalent prices and estimated summary size; it is not subscription quota accounting. ")
+    print("The parenthesized break-even assumes the summary call missed the cache, a conservative upper bound. ")
+    print("Re-read counts only targets first read before the compaction; \"Back to pre size\" is the request at which context regrew to its pre-compaction size. ")
     print("The report reads local transcripts only for token/structural metadata and emits no transcript text, compact summaries, tool arguments, or absolute paths.")
     return 0
 
@@ -237,6 +245,8 @@ def main() -> int:
     report_parser.add_argument("--scope", choices=("repo", "all"), required=True)
     report_parser.add_argument("--cwd", type=Path, default=Path.cwd())
     args = parser.parse_args()
+    # The report prints non-ASCII marks; a cp932 Windows console cannot encode them.
+    sys.stdout.reconfigure(encoding="utf-8")
     if args.command == "collect":
         return collect()
     return report(args.scope, args.cwd.resolve())
