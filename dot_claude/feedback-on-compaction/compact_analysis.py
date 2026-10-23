@@ -8,6 +8,7 @@ Only token counts and structural metadata are exported; transcript text is not.
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import json
 import math
@@ -268,7 +269,11 @@ def parse_claude_file(path: Path) -> tuple[list[Request], list[Compact]]:
 
     # Estimate how non-model context growth divides between tool/MCP results.
     # Token totals are observed; allocation by result character share is an estimate.
-    seen_reads: set[str] = set()
+    # A repeat counts as a re-read only when the target was first read before a
+    # compaction that precedes the repeat; a repeat within one span between
+    # compactions would have happened without compacting.
+    boundaries = [idx for idx, row in enumerate(rows) if row.get("type") == "system" and row.get("subtype") == "compact_boundary"]
+    first_read_span: dict[str, int] = {}
     prev_idx = -1
     prev: Request | None = None
     for idx, req in selected:
@@ -285,12 +290,13 @@ def parse_claude_file(path: Path) -> tuple[list[Request], list[Compact]]:
             req.tool_result_tokens_est = tool_tokens
             req.mcp_result_tokens_est = tool_tokens * sum(meta[2] for _, meta in candidates if is_mcp(meta[0])) / total_chars
             reread_chars = 0
-            for _, (name, inp, chars) in candidates:
+            for j, (name, inp, chars) in candidates:
                 sig = read_signature(name, inp)
-                if sig and sig in seen_reads:
+                if not sig:
+                    continue
+                span = bisect.bisect_left(boundaries, j)
+                if first_read_span.setdefault(sig, span) < span:
                     reread_chars += chars
-                if sig:
-                    seen_reads.add(sig)
             req.reread_tokens_est = tool_tokens * reread_chars / total_chars
         prev_idx, prev = idx, req
 
@@ -660,7 +666,8 @@ def render_report(out: Path, requests: list[Request], compacts: list[Compact], s
         "\"Reread\" and \"fed in\" both accumulate from this compact until the next compact (or session end).",
         "Reread detection matches Read on file_path, Grep/Glob on path+pattern, and a regex over Bash",
         "commands (cat/head/tail/rg/grep/type/Get-Content/Select-String) — offset, limit, and output flags",
-        "are ignored so a second read of the same target is still caught; tools outside this list, or Bash",
+        "are ignored so a second read of the same target is still caught. Only targets first read before an",
+        "earlier compaction count; repeats between two compactions are not attributed to compacting. Tools outside this list, or Bash",
         "reads outside the regex, are not detected and understate the true reread total. Reread tokens are",
         "priced as a fresh cache write (not a plain read), because Claude Code writes essentially all new",
         "context to cache each turn — compacting pays for the reset transcript write and the reread write.",
