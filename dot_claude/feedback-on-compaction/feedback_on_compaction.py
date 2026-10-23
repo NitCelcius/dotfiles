@@ -237,6 +237,8 @@ def main() -> int:
     report_parser.add_argument("--scope", choices=("repo", "all"), required=True)
     report_parser.add_argument("--cwd", type=Path, default=Path.cwd())
     args = parser.parse_args()
+    # The report prints non-ASCII marks; a cp932 Windows console cannot encode them.
+    sys.stdout.reconfigure(encoding="utf-8")
     if args.command == "collect":
         return collect()
     return report(args.scope, args.cwd.resolve())
