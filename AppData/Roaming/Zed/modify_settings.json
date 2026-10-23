@@ -17,6 +17,13 @@
 {{- $autoCompact := dig "agent" "auto_compact" "" $live -}}
 {{- $playSound := dig "agent" "play_sound_when_agent_done" "" $live -}}
 {{- $codexOptions := dig "agent_servers" "codex-acp" "default_config_options" "" $live -}}
+{{- $formatOnSave := dig "format_on_save" "" $live -}}
+{{- $windowTitle := dig "window_title_format" "" $live -}}
+{{- $termShell := dig "terminal" "shell" "" $live -}}
+{{- $termBadge := dig "terminal" "show_count_badge" "" $live -}}
+{{- $termToolbar := dig "terminal" "toolbar" "" $live -}}
+{{- $agentModel := dig "agent" "default_model" "model" "claude-sonnet-5" $live -}}
+{{- $autosaveMs := dig "autosave" "after_delay" "milliseconds" 60000 $live -}}
 // Zed settings
 //
 // For information on how to configure Zed, see the Zed
@@ -25,7 +32,9 @@
 // To see all of Zed's default settings without changing your
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
-{{ $opening }}  "diff_view_style": "split",
+{{ $opening }}{{ if $formatOnSave }}  "format_on_save": {{ toJson $formatOnSave }},
+{{ end }}{{ if $windowTitle }}  "window_title_format": {{ toJson $windowTitle }},
+{{ end }}  "diff_view_style": "split",
   "edit_predictions": {
 {{ if $dataCollection }}    "allow_data_collection": {{ toJson $dataCollection }},
 {{ end }}    "provider": "zed",
@@ -77,13 +86,13 @@
       "language_servers": ["ruff", "basedpyright"],
     },
     "TypeScript": {
-      "language_servers": ["typescript-ls", "!vtsls"],
+      "language_servers": ["typescript-language-server", "!vtsls"],
     },
     "TSX": {
-      "language_servers": ["typescript-ls", "!vtsls"],
+      "language_servers": ["typescript-language-server", "!vtsls"],
     },
     "JavaScript": {
-      "language_servers": ["typescript-ls", "!vtsls"],
+      "language_servers": ["typescript-language-server", "!vtsls"],
     },
   },
   "agent": {
@@ -97,7 +106,7 @@
     "default_model": {
       "effort": "high",
       "provider": "zed.dev",
-      "model": "claude-sonnet-5",
+      "model": {{ toJson $agentModel }},
       "enable_thinking": true,
     },
     "favorite_models": [
@@ -141,7 +150,10 @@
     },
   },
   "terminal": {
-    "font_family": "HackGen35 Console NF",
+{{ if $termShell }}    "shell": {{ toJson $termShell }},
+{{ end }}{{ if $termBadge }}    "show_count_badge": {{ toJson $termBadge }},
+{{ end }}{{ if $termToolbar }}    "toolbar": {{ toJson $termToolbar }},
+{{ end }}    "font_family": "HackGen35 Console NF",
     "env": {},
   },
   "telemetry": {
@@ -164,7 +176,7 @@
   },
   "autosave": {
     "after_delay": {
-      "milliseconds": 60000,
+      "milliseconds": {{ toJson $autosaveMs }},
     },
   },
   "buffer_font_fallbacks": ["Menlo", "Monaco", "monospace"],
