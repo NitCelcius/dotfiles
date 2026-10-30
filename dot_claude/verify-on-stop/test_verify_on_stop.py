@@ -249,3 +249,68 @@ def test_not_a_git_repo_allows_stop(tmp_path: Path, data_root: Path) -> None:
     write_block(bare, "exit 1")
     r = fire(bare, data_root)
     assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+
+
+PYPROJECT_WITH_PATH_SOURCE = """[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["lib"]
+
+[tool.uv.sources]
+lib = { path = "../lib" }
+"""
+
+
+@pytest.fixture
+def uv_repo(repo: Path, tmp_path: Path) -> Path:
+    """A uv project whose `../lib` source resolves from the main checkout only."""
+    (tmp_path / "lib").mkdir()
+    (repo / "pyproject.toml").write_text(PYPROJECT_WITH_PATH_SOURCE, encoding="utf-8")
+    (repo / "uv.lock").write_text("lock\n", encoding="utf-8")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "uv project")
+    return repo
+
+
+def add_worktree(repo: Path, path: Path) -> Path:
+    git(repo, "worktree", "add", "-q", str(path), "-b", path.name)
+    return path
+
+
+def test_nested_worktree_uses_the_main_checkout(uv_repo: Path) -> None:
+    wt = add_worktree(uv_repo, uv_repo / ".worktree" / "wt")
+    assert verify_on_stop.main_checkout_uv_project(wt) == uv_repo.resolve()
+
+
+def test_main_checkout_itself_is_left_alone(uv_repo: Path) -> None:
+    assert verify_on_stop.main_checkout_uv_project(uv_repo) is None
+
+
+def test_sibling_worktree_that_resolves_the_source_is_left_alone(uv_repo: Path, tmp_path: Path) -> None:
+    wt = add_worktree(uv_repo, tmp_path / "repo-wt")
+    assert verify_on_stop.main_checkout_uv_project(wt) is None
+
+
+def test_worktree_with_a_different_lock_is_left_alone(uv_repo: Path) -> None:
+    wt = add_worktree(uv_repo, uv_repo / ".worktree" / "wt")
+    (wt / "uv.lock").write_text("other lock\n", encoding="utf-8")
+    assert verify_on_stop.main_checkout_uv_project(wt) is None
+
+
+def test_installed_project_is_left_alone(uv_repo: Path) -> None:
+    wt = add_worktree(uv_repo, uv_repo / ".worktree" / "wt")
+    packaged = PYPROJECT_WITH_PATH_SOURCE + '\n[build-system]\nrequires = ["hatchling"]\n'
+    for checkout in (uv_repo, wt):
+        (checkout / "pyproject.toml").write_text(packaged, encoding="utf-8")
+    assert verify_on_stop.main_checkout_uv_project(wt) is None
+
+
+def test_hook_runs_quick_with_uv_project_in_a_nested_worktree(
+    uv_repo: Path, data_root: Path, tmp_path: Path
+) -> None:
+    wt = add_worktree(uv_repo, uv_repo / ".worktree" / "wt")
+    seen = tmp_path / "uv_project.txt"
+    write_block(wt, f"{PYTHON} -c \"import os; open(r'{seen}','w').write(os.environ.get('UV_PROJECT',''))\"")
+    r = fire(wt, data_root)
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert Path(seen.read_text()).resolve() == uv_repo.resolve()

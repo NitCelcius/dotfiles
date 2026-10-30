@@ -33,6 +33,13 @@ only Markdown, say — the whole command is skipped, so choose the glob to cover
 everything that could break the check. A change set too wide for a command line is
 also skipped: that is a commit, and `full` is its gate.
 
+In a linked git worktree nested at a different depth than the main checkout, a
+`[tool.uv.sources]` path such as `../../lib` no longer resolves and every `uv run`
+fails before testing anything. When the worktree's pyproject.toml and uv.lock are
+byte-identical to the main checkout's and the project is not itself installed, the
+command runs with `UV_PROJECT` set to the main checkout, whose environment is then
+the same one. In any other case it runs as is, and fails loudly.
+
 `--selftest` runs the parser fixtures and prints a pass/fail line per case. It
 takes no stdin and touches nothing on disk.
 """
@@ -47,6 +54,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from datetime import datetime, timezone
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
@@ -130,6 +138,53 @@ def git(args: list[str], cwd: Path, env: dict[str, str] | None = None) -> str | 
     except (OSError, subprocess.SubprocessError):
         return None
     return done.stdout if done.returncode == 0 else None
+
+
+def read_optional(path: Path) -> bytes | None:
+    return path.read_bytes() if path.is_file() else None
+
+
+def uv_source_paths(config: dict) -> list[str]:
+    """Every `path = ...` in [tool.uv.sources], including per-marker source lists."""
+    paths = []
+    for source in config.get("tool", {}).get("uv", {}).get("sources", {}).values():
+        for entry in source if isinstance(source, list) else [source]:
+            if isinstance(entry, dict) and "path" in entry:
+                paths.append(entry["path"])
+    return paths
+
+
+def main_checkout_uv_project(root: Path) -> Path | None:
+    """The main checkout to point uv at, when `root` is a linked worktree that needs it.
+
+    None unless all hold: `root` is a linked worktree; its pyproject.toml and uv.lock
+    are byte-identical to the main checkout's; the project has no [build-system], so
+    uv will not install it from the main checkout and shadow the worktree's code; and
+    a uv source path resolves from the main checkout but not from `root`.
+    """
+    common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
+    own = git(["rev-parse", "--absolute-git-dir"], root)
+    if not common or not own:
+        return None
+    common_dir = Path(common.strip()).resolve()
+    if common_dir == Path(own.strip()).resolve() or common_dir.name != ".git":
+        return None
+    main = common_dir.parent
+    try:
+        pyproject = read_optional(root / "pyproject.toml")
+        if pyproject is None or pyproject != read_optional(main / "pyproject.toml"):
+            return None
+        if read_optional(root / "uv.lock") != read_optional(main / "uv.lock"):
+            return None
+        config = tomllib.loads(pyproject.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return None
+    if "build-system" in config:
+        return None
+    for path in uv_source_paths(config):
+        if not (root / path).exists() and (main / path).exists():
+            return main
+    return None
 
 
 def changed_paths(status_z: str) -> list[str]:
@@ -410,10 +465,15 @@ def run() -> int:
         log_decision(targeting, cwd=cwd_text)
         return EXIT_ALLOW_STOP
 
+    uv_project = main_checkout_uv_project(root)
+    env = {**os.environ, "UV_PROJECT": str(uv_project)} if uv_project else None
+    uv_note = f"(run with UV_PROJECT={uv_project})\n" if uv_project else ""
+
     try:
         done = subprocess.run(
             command,
             cwd=root,
+            env=env,
             shell=True,
             capture_output=True,
             text=True,
@@ -448,19 +508,23 @@ def run() -> int:
         entry.pop("blocked_shallow", None)
         state[key] = entry
         save_state(state)
-        log_decision("passed", cwd=cwd_text, command=command)
+        log_decision("passed", cwd=cwd_text, command=command, uv_project=uv_project and str(uv_project))
         return EXIT_ALLOW_STOP
 
     record_block(state, key, entry, fingerprint, shallow, root)
 
     print(
         f"quick verification failed (exit {done.returncode}): {command}\n"
+        f"{uv_note}"
         f"This is the project's own ## Verification command. Fix what it reports "
         f"before finishing, or say plainly that you are leaving it failing.\n\n"
         f"{tail((done.stdout or '') + (done.stderr or ''))}",
         file=sys.stderr,
     )
-    log_decision("blocked", cwd=cwd_text, command=command, exit_code=done.returncode)
+    log_decision(
+        "blocked", cwd=cwd_text, command=command, exit_code=done.returncode,
+        uv_project=uv_project and str(uv_project),
+    )
     return EXIT_BLOCK_STOP
 
 
