@@ -32,10 +32,11 @@ If something local still matters, tell the user in chat instead.
 - `## Summary` — one or two sentences.
 - `## Changes` — one bullet per change, file paths in backticks.
 - `## Verification` — only repeatable checks that aren't already covered by CI or
-  obvious from the diff. Omit the heading when nothing survives that filter.
+  obvious from the diff, each stated once — no line that rewords the one before it.
+  Omit the heading when nothing survives that filter.
 - `## Not in this PR` — work a reviewer might expect from this PR's own scope but that
   is deliberately left out. Never ideas, plans or follow-ups that only came up in the
-  session. Omit when empty.
+  session — the next PR in a stack included. Omit when empty.
 - Then the attribution lines from the session's system reminder.
 
 ## Process
