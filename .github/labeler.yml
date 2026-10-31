@@ -36,6 +36,7 @@
       - any-glob-to-any-file:
           - dot_claude/skills/**
           - dot_codex/skills/**
+          - .chezmoitemplates/hear-my-plan.md
           - dot_local/bin/*workcell*
 
 "area:agents":
