@@ -35,9 +35,8 @@ not the repo you mean — the chezmoi source, worktrees, and Unity projects all 
 adjacent to or nested near each other.
 
 ### Pull requests
-Open every PR as a draft, and get user review of the body before `gh pr create` — with
-or without `/draft-pr`. Body rules live in `~/.claude/skills/draft-pr/pr-body.md`; when
-I correct a body, update that file.
+The PR procedure and body rules live in `~/.claude/skills/draft-pr/pr-body.md`, with or
+without `/draft-pr`; when I correct a body, update that file.
 
 ## Communication & Clarifying Intent
 
@@ -233,9 +232,7 @@ default of spawning agents only on request: when they hold, dispatch without bei
 
 - Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
   main session's Opus, which is slow and costly. Default to Sonnet — iterative
-  testing and coding are its job. Use Haiku only for read-only or judgment-free
-  repeated operations, never where a decision or a change is needed. When Sonnet is
-  struggling, hand the work to Opus.
+  testing and coding are its job. When Sonnet is struggling, hand the work to Opus.
 - Only main integrates, cleans up history, and pushes. Subagents do not commit,
   except a Workcell executor inside an activated `/workcell-delegate` plan, which
   makes local WIP commits in its own worktree.
