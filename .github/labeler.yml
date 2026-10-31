@@ -29,7 +29,8 @@
   - changed-files:
       - any-glob-to-any-file:
           - dot_claude/CLAUDE.md
-          - dot_codex/AGENTS.md
+          - dot_codex/AGENTS.md.tmpl
+          - .chezmoitemplates/git-conventions.md
 
 "area:skills":
   - changed-files:

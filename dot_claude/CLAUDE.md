@@ -24,40 +24,15 @@
 
 ## Git Conventions
 
-Branch naming, local ignore patterns, fetching, rebasing, merging, and the signing
-fallback live in the `git-workflow` skill.
-
-### Commit messages
-- Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`
-- WIP commits: `WIP: <type>(<feature, optional>): <change>`, e.g.
-  `WIP: feat(auth): refresh expired tokens`. A commit that is not WIP drops the
-  `WIP:` prefix.
-- Subject: what was done. Body: usually about two lines on how it was done — the code
-  should explain the rest. Write for someone who never saw the session: no task
-  numbers or other session-internal references. Include the issue number when working
-  on an issue.
-- Omit the body when the diff is self-evident: a config-only change, or about 10 lines
-  or fewer.
-- A message written to a file for `git commit -F` goes in the repo's git dir as a `.md`
-  file (`git rev-parse --absolute-git-dir`, which also resolves in a worktree), nowhere
-  else.
+Branch naming, local ignore patterns, commit messages, fetching, rebasing, merging,
+pushing, rewriting others' state, and the signing fallback live in the `git-workflow`
+skill. Load it before a commit or a push.
 
 ### Repo root
 Before a git command that writes (`add`, `commit`, `checkout`, `reset`, `rebase`, `push`),
 confirm the target with `git rev-parse --show-toplevel`. The working directory is often
 not the repo you mean — the chezmoi source, worktrees, and Unity projects all sit
 adjacent to or nested near each other.
-
-### Pushing
-Always name the remote and branch: `git push -u origin <branch>`. Never a bare
-`git push` or `git push origin HEAD` — a branch created from `origin/main` tracks main,
-so a bare push lands there. Push to the default branch only when I approved it for that
-repo (e.g. a PoC).
-
-### Rewriting others' state
-Never force-push without first showing `git log --oneline @{u}..` (what you'd overwrite)
-and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
-current working tree — create a worktree instead ([[using-git-worktrees]]).
 
 ### Pull requests
 Open every PR as a draft, and get user review of the body before `gh pr create` — with
