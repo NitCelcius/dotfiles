@@ -1,22 +1,7 @@
 {{- /* chezmoi:modify-template */ -}}
 {{- /* Partial management. Claude Code writes this file at runtime, so the   */ -}}
 {{- /* live contents pass through and only the keys below are enforced:      */ -}}
-{{- /*   hooks.PostCompact  — drives the feedback-on-compaction skill        */ -}}
-{{- /*   hooks.Stop        — runs the project's quick verification, and      */ -}}
-{{- /*                       exits 2 to keep Claude from closing on a claim  */ -}}
-{{- /*   hooks.SessionStart — flags a pending diff, commit ask at 300+      */ -}}
-{{- /*   hooks.SessionStart, PostToolUse — prompt for the dotfiles change log */ -}}
-{{- /*   hooks.PermissionRequest, PreToolUse, Stop (play-sound.sh) — sound   */ -}}
-{{- /*                       cues for permission prompts, AskUserQuestion,  */ -}}
-{{- /*                       and task completion                            */ -}}
-{{- /*   hooks.PreToolUse   — asks before a delete a shim relies on         */ -}}
-{{- /*   hooks.PreToolUse   — asks before a delete through a link           */ -}}
-{{- /*   hooks.PreToolUse   — asks before deletes through links or shims    */ -}}
-{{- /*   hooks.PreToolUse   — asks on link/shim deletes, denies link globs  */ -}}
-{{- /*   hooks.PreToolUse   — git-gate: allows a forced branch delete it has */ -}}
-{{- /*                       checked, asks when one loses unpushed work,     */ -}}
-{{- /*                       gates force and delete pushes                   */ -}}
-{{- /*   hooks.PreToolUse   — denies heredocs piped into Python's stdin      */ -}}
+{{- /*   hooks.*            — every row of the $hooks table below            */ -}}
 {{- /*   enabledPlugins.*   — off globally except $keepOn; projects opt in   */ -}}
 {{- /*   permissions.allow  — pre-cleared read-only MCP/chezmoi/git calls,   */ -}}
 {{- /*                       plus rebases                                    */ -}}
@@ -123,82 +108,81 @@
 {{- range $k, $v := $otelEnv -}}
 {{-   $cfg = setValueAtPath (printf "env.%s" $k) $v $cfg -}}
 {{- end -}}
-{{- $script := printf "%s/.claude/feedback-on-compaction/feedback_on_compaction.py" .chezmoi.homeDir -}}
-{{- $hook := dict "type" "command" "command" (printf "python \"%s\" collect" $script) "timeout" 10 -}}
-{{- $cfg = setValueAtPath "hooks.PostCompact" (list (dict "hooks" (list $hook))) $cfg -}}
-{{- /* Timeout sits above the hook's own 180s cap so the hook reports a slow */ -}}
-{{- /* quick command itself rather than being killed without explanation.    */ -}}
-{{- $verify := printf "%s/.claude/verify-on-stop/verify_on_stop.py" .chezmoi.homeDir -}}
-{{- $stopHook := dict "type" "command" "command" (printf "python \"%s\"" $verify) "timeout" 240 -}}
-{{- $keptStop := list -}}
-{{- range default (list) (dig "hooks" "Stop" (list) $cfg) -}}
-{{-   if not (contains "verify_on_stop.py" (toJson .)) -}}{{- $keptStop = append $keptStop . -}}{{- end -}}
+{{- /* Hooks. One row each: event, matcher ("" matches every tool or source),  */ -}}
+{{- /* script under ~/.claude with its arguments, timeout in seconds (0 keeps   */ -}}
+{{- /* the default), and extra handler fields. A .py script runs through       */ -}}
+{{- /* python, a .sh script directly. Live entries that run one                */ -}}
+{{- /* of these scripts are dropped and the rows appended, so hooks added by    */ -}}
+{{- /* hand survive an apply.                                                  */ -}}
+{{- $hooks := list
+      (list "PostCompact" "" "feedback-on-compaction/feedback_on_compaction.py collect" 10 (dict))
+      (list "Stop" "" "verify-on-stop/verify_on_stop.py" 240 (dict))
+      (list "Stop" "" "hooks/play-sound.sh complete" 0 (dict))
+      (list "SessionStart" "" "session-start-diff/session_start_diff.py" 15 (dict))
+      (list "SessionStart" "" "dotfiles-change-log/dotfiles_change_log.py session-start" 15 (dict))
+      (list "PostToolUse" "Bash|PowerShell" "dotfiles-change-log/dotfiles_change_log.py post-commit" 15 (dict))
+      (list "PermissionRequest" "" "hooks/play-sound.sh permission" 0 (dict))
+      (list "PreToolUse" "AskUserQuestion" "hooks/play-sound.sh question" 0 (dict))
+      (list "PreToolUse" "Bash|PowerShell" "rm-junction-guard/rm_junction_guard.py" 10 (dict))
+      (list "PreToolUse" "Bash|PowerShell" "git-gate/git_gate.py" 30 (dict))
+      (list "PreToolUse" "Bash" "heredoc-stdin-guard/heredoc_stdin_guard.py" 10 (dict)) -}}
+{{- /* What each row does:                                                     */ -}}
+{{- /*   feedback_on_compaction — journals each compaction for that skill     */ -}}
+{{- /*   verify_on_stop     — runs the project's quick verification and exits */ -}}
+{{- /*                        2 to keep Claude from closing on a claim; the   */ -}}
+{{- /*                        timeout sits above the hook's own 180s cap so a */ -}}
+{{- /*                        slow command is reported, not killed silently   */ -}}
+{{- /*   play-sound.sh      — sound cues for task completion, permission      */ -}}
+{{- /*                        prompts and AskUserQuestion                     */ -}}
+{{- /*   session_start_diff — flags a pending diff, commit ask at 300+ lines  */ -}}
+{{- /*   dotfiles_change_log — prompts for the dotfiles change-log row        */ -}}
+{{- /*   rm_junction_guard  — asks before a delete through a link or of what  */ -}}
+{{- /*                        a shim runs, denies link globs                  */ -}}
+{{- /*   git_gate           — allows a forced branch delete it has checked,   */ -}}
+{{- /*                        asks when one loses unpushed work, gates force  */ -}}
+{{- /*                        and delete pushes; the timeout covers a few     */ -}}
+{{- /*                        5s-capped git calls per deleted branch, and a   */ -}}
+{{- /*                        timed-out hook falls back to a prompt           */ -}}
+{{- /*   heredoc_stdin_guard — denies heredocs piped into Python's stdin      */ -}}
+{{- /* The completion sound goes first in Stop, ahead of live entries.         */ -}}
+{{- $firstInStop := "hooks/play-sound.sh complete" -}}
+{{- $hookEvents := list -}}
+{{- $hookScripts := list -}}
+{{- range $h := $hooks -}}
+{{-   $hookEvents = append $hookEvents (index $h 0) -}}
+{{-   $hookScripts = append $hookScripts (base (first (splitList " " (index $h 2)))) -}}
 {{- end -}}
-{{- $cfg = setValueAtPath "hooks.Stop" (append $keptStop (dict "hooks" (list $stopHook))) $cfg -}}
-{{- $diffCheck := printf "%s/.claude/session-start-diff/session_start_diff.py" .chezmoi.homeDir -}}
-{{- $startHook := dict "type" "command" "command" (printf "python \"%s\"" $diffCheck) "timeout" 15 -}}
-{{- $keptStart := list -}}
-{{- range default (list) (dig "hooks" "SessionStart" (list) $cfg) -}}
-{{-   if not (contains "session_start_diff.py" (toJson .)) -}}{{- $keptStart = append $keptStart . -}}{{- end -}}
+{{- range $ev := uniq $hookEvents -}}
+{{-   $kept := list -}}
+{{-   range $e := default (list) (dig "hooks" $ev (list) $cfg) -}}
+{{-     $ours := false -}}
+{{-     range $s := uniq $hookScripts -}}
+{{-       if contains $s (toJson $e) -}}{{- $ours = true -}}{{- end -}}
+{{-     end -}}
+{{-     if not $ours -}}{{- $kept = append $kept $e -}}{{- end -}}
+{{-   end -}}
+{{-   $cfg = setValueAtPath (printf "hooks.%s" $ev) $kept $cfg -}}
 {{- end -}}
-{{- $cfg = setValueAtPath "hooks.SessionStart" (append $keptStart (dict "hooks" (list $startHook))) $cfg -}}
-{{- $changeLog := printf "%s/.claude/dotfiles-change-log/dotfiles_change_log.py" .chezmoi.homeDir -}}
-{{- $logStartHook := dict "type" "command" "command" (printf "python \"%s\" session-start" $changeLog) "timeout" 15 -}}
-{{- $keptLogStart := list -}}
-{{- range default (list) (dig "hooks" "SessionStart" (list) $cfg) -}}
-{{-   if not (contains "dotfiles_change_log.py" (toJson .)) -}}{{- $keptLogStart = append $keptLogStart . -}}{{- end -}}
+{{- range $h := $hooks -}}
+{{-   $ev := index $h 0 -}}
+{{-   $words := splitList " " (index $h 2) -}}
+{{-   $cmd := printf "~/.claude/%s" (first $words) -}}
+{{-   if hasSuffix ".py" (first $words) -}}
+{{-     $cmd = printf "python \"%s/.claude/%s\"" $.chezmoi.homeDir (first $words) -}}
+{{-   end -}}
+{{-   if rest $words -}}{{- $cmd = printf "%s %s" $cmd (join " " (rest $words)) -}}{{- end -}}
+{{-   $handler := dict "type" "command" "command" $cmd -}}
+{{-   if gt (index $h 3) 0 -}}{{- $handler = set $handler "timeout" (index $h 3) -}}{{- end -}}
+{{-   $handler = merge $handler (index $h 4) -}}
+{{-   $entry := dict "hooks" (list $handler) -}}
+{{-   if index $h 1 -}}{{- $entry = set $entry "matcher" (index $h 1) -}}{{- end -}}
+{{-   $live := dig "hooks" $ev (list) $cfg -}}
+{{-   if eq (index $h 2) $firstInStop -}}
+{{-     $cfg = setValueAtPath (printf "hooks.%s" $ev) (prepend $live $entry) $cfg -}}
+{{-   else -}}
+{{-     $cfg = setValueAtPath (printf "hooks.%s" $ev) (append $live $entry) $cfg -}}
+{{-   end -}}
 {{- end -}}
-{{- $cfg = setValueAtPath "hooks.SessionStart" (append $keptLogStart (dict "hooks" (list $logStartHook))) $cfg -}}
-{{- $logCommitHook := dict "type" "command" "command" (printf "python \"%s\" post-commit" $changeLog) "timeout" 15 -}}
-{{- $keptPost := list -}}
-{{- range default (list) (dig "hooks" "PostToolUse" (list) $cfg) -}}
-{{-   if not (contains "dotfiles_change_log.py" (toJson .)) -}}{{- $keptPost = append $keptPost . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.PostToolUse" (append $keptPost (dict "matcher" "Bash|PowerShell" "hooks" (list $logCommitHook))) $cfg -}}
-{{- /* Sound-effect hooks. Hardcoded here (not left to a live-file merge) so a */ -}}
-{{- /* fresh machine gets them too, not just one where they were hand-added.   */ -}}
-{{- $soundCmd := "~/.claude/hooks/play-sound.sh" -}}
-{{- $permHook := dict "matcher" "" "hooks" (list (dict "type" "command" "command" (printf "%s permission" $soundCmd))) -}}
-{{- $keptPerm := list -}}
-{{- range default (list) (dig "hooks" "PermissionRequest" (list) $cfg) -}}
-{{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptPerm = append $keptPerm . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.PermissionRequest" (append $keptPerm $permHook) $cfg -}}
-{{- $questionHook := dict "matcher" "AskUserQuestion" "hooks" (list (dict "type" "command" "command" (printf "%s question" $soundCmd))) -}}
-{{- $keptPreToolUse := list -}}
-{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
-{{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptPreToolUse = append $keptPreToolUse . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptPreToolUse $questionHook) $cfg -}}
-{{- $completeHook := dict "matcher" "" "hooks" (list (dict "type" "command" "command" (printf "%s complete" $soundCmd))) -}}
-{{- $keptStopSound := list -}}
-{{- range default (list) (dig "hooks" "Stop" (list) $cfg) -}}
-{{-   if not (contains "play-sound.sh" (toJson .)) -}}{{- $keptStopSound = append $keptStopSound . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.Stop" (prepend $keptStopSound $completeHook) $cfg -}}
-{{- $rmGuard := printf "%s/.claude/rm-junction-guard/rm_junction_guard.py" .chezmoi.homeDir -}}
-{{- $rmHook := dict "type" "command" "command" (printf "python \"%s\"" $rmGuard) "timeout" 10 -}}
-{{- $keptPre := list -}}
-{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
-{{-   if not (contains "rm_junction_guard.py" (toJson .)) -}}{{- $keptPre = append $keptPre . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptPre (dict "matcher" "Bash|PowerShell" "hooks" (list $rmHook))) $cfg -}}
-{{- /* Timeout covers a few 5s-capped git calls per deleted branch; a timed-out */ -}}
-{{- /* hook gives no decision, so a forced delete falls back to a prompt.      */ -}}
-{{- $gitGate := printf "%s/.claude/git-gate/git_gate.py" .chezmoi.homeDir -}}
-{{- $gateHook := dict "type" "command" "command" (printf "python \"%s\"" $gitGate) "timeout" 30 -}}
-{{- $keptGate := list -}}
-{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
-{{-   if not (contains "git_gate.py" (toJson .)) -}}{{- $keptGate = append $keptGate . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptGate (dict "matcher" "Bash|PowerShell" "hooks" (list $gateHook))) $cfg -}}
-{{- $heredocGuard := printf "%s/.claude/heredoc-stdin-guard/heredoc_stdin_guard.py" .chezmoi.homeDir -}}
-{{- $heredocHook := dict "type" "command" "command" (printf "python \"%s\"" $heredocGuard) "timeout" 10 -}}
-{{- $keptHeredoc := list -}}
-{{- range default (list) (dig "hooks" "PreToolUse" (list) $cfg) -}}
-{{-   if not (contains "heredoc_stdin_guard.py" (toJson .)) -}}{{- $keptHeredoc = append $keptHeredoc . -}}{{- end -}}
-{{- end -}}
-{{- $cfg = setValueAtPath "hooks.PreToolUse" (append $keptHeredoc (dict "matcher" "Bash" "hooks" (list $heredocHook))) $cfg -}}
 {{- range $name, $_ := (default (dict) (get $cfg "enabledPlugins")) -}}
 {{-   $cfg = setValueAtPath (printf "enabledPlugins.%s" $name) (has $name $keepOn) $cfg -}}
 {{- end -}}
