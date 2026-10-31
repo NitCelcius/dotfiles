@@ -20,7 +20,6 @@ Note, `~/.gitconfig.local` is loaded for machine-specific git config.
 | `.zshrc`, `.p10k.zsh` | Zsh + Powerlevel10k config (Linux) |
 | `AppData/` | Windows-specific app config |
 | `dot_claude/` | Claude Code config |
-| `docs/` | Plans and evaluation records for this repo; not deployed |
 | `ci/` | CI-only fixtures such as the mock `bw`; not deployed |
 | `.devcontainer/` | Local sandbox for testing hooks against real git commands: the checkout is mounted read-only and cloned inside, and only the Anthropic API is reachable; not deployed |
 
@@ -42,9 +41,7 @@ an edit to the deployed copy is reverted by the next apply.
 The `modifying-dotfiles` skill governs changes to this repo: branch first, edit the
 source, keep private detail out, and log the reason for each change in Notion.
 
-The root `CLAUDE.md` covers working on this repo and is not deployed. Workflow
-regression scenarios for the global instructions live in
-`docs/evals/claude-workflow-scenarios.md`.
+The root `CLAUDE.md` covers working on this repo and is not deployed.
 
 ## Verification
 
