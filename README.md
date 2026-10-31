@@ -38,6 +38,14 @@ an edit to the deployed copy is reverted by the next apply.
 | `dot_claude/rm-junction-guard/` | PreToolUse hook that asks before a delete that reaches through a junction or symlink, or removes what a global shim runs, and denies a glob over links until the command sets `DELETE_IT_ANYWAY=1` |
 | `dot_claude/dotfiles-change-log/` | PostToolUse and SessionStart hooks that prompt Claude to log the why of each dotfiles commit to the Notion change log |
 | `dot_claude/git-gate/` | PreToolUse hook that allows a forced `git branch -D` it has checked, asks before one drops unpushed commits of a remote-backed branch, and gates force and delete pushes; with `--unattended` (the `unattended-run` skill) it denies whatever would ask |
+| `dot_claude/heredoc-stdin-guard/` | PreToolUse hook that denies a Bash command feeding a heredoc into Python's stdin, which hangs in Git Bash |
+| `dot_claude/feedback-on-compaction/` | PostCompact hook that journals each compaction for the `feedback-on-compaction` skill's report |
+| `dot_claude/usage-scan/` | SessionStart hook that writes a skill and slash-command usage report to `~/.claude/usage-scan/out` when the newest one there is 7 or more days old |
+| `dot_claude/hooks/` | `play-sound.sh` and its sounds, run on PermissionRequest, before AskUserQuestion, and on Stop |
+
+The hooks are registered by the `$hooks` table in `dot_claude/modify_settings.json`.
+The three PreToolUse gates (`rm-junction-guard`, `git-gate`, `heredoc-stdin-guard`) block
+the tool call when they fail to run.
 
 The `modifying-dotfiles` skill governs changes to this repo: branch first, edit the
 source, keep private detail out, and log the reason for each change in Notion.
