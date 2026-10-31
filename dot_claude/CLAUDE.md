@@ -224,7 +224,12 @@ artifact it did not author — the filesystem, the console, the running app.
 
 If the assertion is cheap to keep, make it a regression test rather than discarding it.
 
-`verify-before-claiming` carries the tagging vocabulary for this rule.
+Tag each works/broken claim by its evidence, and keep differently tagged claims in
+separate sentences:
+- `VERIFIED-RUNTIME` — executed and observed
+- `VERIFIED-CODE` — read the path end to end
+- `INFERRED` — reading suggests it, nobody ran it. Never present it as fact: say it is
+  inferred and name the one step that would make it `VERIFIED-RUNTIME`
 
 ## Reporting
 
