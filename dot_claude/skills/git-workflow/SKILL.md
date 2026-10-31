@@ -28,9 +28,10 @@ from `origin/<target>` when someone else rebased or force-pushed it, producing a
 result that looks correct locally but conflicts against the real upstream.
 
 ## Merge strategy
-Rebase & fast-forward merge. Not squash merge.
-GitHub does not sign commits merged this way — the branch commits land on `main` as-is,
-keeping their original signature state.
+Rebase and merge (GitHub's rebase-merge). Not squash merge.
+GitHub recreates every commit when it rebase-merges, so no signature reaches `main`,
+whether the branch commit was signed or not. A signature only needs to be on the
+branch the PR merges from.
 
 ## Reporting whether a branch is merged
 GitHub's rebase & merge rewrites commits, so `git branch --merged` can call a merged
@@ -50,5 +51,5 @@ If the signing agent is unavailable mid-commit, retry with `--no-gpg-sign` immed
 Do not ask, do not investigate the cause — an unsigned WIP commit is never worth
 interrupting the work for.
 When the task is done, state plainly that the commits were made without signing.
-Because the merge is rebase & ff, unsigned commits stay unsigned on `main`. Signing is
-therefore reconciled once, at PR time, not during the work — see the `draft-pr` skill.
+Since only the branch needs signatures (see Merge strategy), signing is reconciled
+once, at PR time, not during the work — see the `draft-pr` skill.
