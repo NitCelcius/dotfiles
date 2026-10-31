@@ -109,7 +109,7 @@ Gathered into the header they grow past a useful range read, and they end up far
 from the task a later session is actually reading — which is exactly how an
 assumption gets treated as a fact.
 
-Tag them where they sit, using the same vocabulary as `verify-before-claiming`:
+Tag them where they sit, using the vocabulary of CLAUDE.md "Claiming Done":
 
 ```markdown
 - [ ] **Step 2: Point the loader at `data/out/merged.csv`**

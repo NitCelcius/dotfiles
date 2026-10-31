@@ -33,7 +33,7 @@ an explicit yes to the question in "Output & stopping". Never save unprompted.
    genuinely wide, and only after asking the user. Say how many agents and what
    each lane covers, then wait for a go-ahead (see `archaeology-fanout` for the
    sizing check).
-3. Verify claims before asserting them — see `verify-before-claiming`. Don't let a
+3. Verify claims before asserting them — see CLAUDE.md "Claiming Done". Don't let a
    plausible code-reading story stand in for something you actually ran.
 4. Write findings as a note:
    1. The question asked
@@ -65,7 +65,7 @@ an explicit yes to the question in "Output & stopping". Never save unprompted.
 
 ## Don't
 - Don't treat "interesting, let me just fix this" as license to edit mid-investigation.
-- Don't present an inferred conclusion as verified — tag it (see `verify-before-claiming`).
+- Don't present an inferred conclusion as verified — tag it (see CLAUDE.md "Claiming Done").
 - Don't auto-invoke `hear-my-plan`'s build-plan structure — a decision note is not
   an execution plan; skip sections that don't apply rather than forcing the shape.
 - Don't save the note without being asked, and don't treat "that was useful" as a yes.

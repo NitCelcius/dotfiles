@@ -45,7 +45,7 @@ into six agents.
    yourself before building on it. Tag every claim:
    - `VERIFIED-CODE` — read the path end to end
    - `VERIFIED-RUNTIME` — actually executed/observed it
-   - `INFERRED` — code reading suggests this, not run (see `verify-before-claiming`)
+   - `INFERRED` — code reading suggests this, not run (see CLAUDE.md "Claiming Done")
    - `CONTRADICTION` — lanes disagreed; give both views
 5. For any claim tagged INFERRED where the question was "does this work," name the
    one command or step that would upgrade it.
