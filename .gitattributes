@@ -4,6 +4,7 @@
 # Markdown is deployed by chezmoi to Windows destinations; keep CRLF in the
 # working tree so source and destination compare equal.
 *.md text eol=crlf
+*.md.tmpl text eol=crlf
 
 # Shell hooks must stay LF — a CRLF shebang (#!/bin/sh\r) fails to execute
 # on a Windows checkout.

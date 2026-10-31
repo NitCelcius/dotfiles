@@ -1,10 +1,5 @@
----
-name: git-workflow
-description: Sets git conventions for branching, local ignores, fetch/rebase/merge, and signing. Use before those, or when a commit fails to sign.
----
-
-# Git workflow
-
+{{- /* Git conventions shared by Claude Code and Codex. Included by          */ -}}
+{{- /* dot_claude/skills/git-workflow/SKILL.md.tmpl and dot_codex/AGENTS.md.tmpl. */ -}}
 ## Ignore patterns
 Use `.git/info/exclude` for local-only ignore patterns (e.g. worktree directories).
 Do not add personal/local entries to `.gitignore`.
@@ -14,6 +9,32 @@ Do not add personal/local entries to `.gitignore`.
 - Features: `feat/(name-of-something)`
 - Append date as `YYMMDD` suffix only to avoid name conflicts, e.g. `feat/(name)/260328`
 - WIP branches: prefix with `wip/`, e.g. `wip/bugfix/(name)`, `wip/feat/(name)`
+
+## Commit messages
+- Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`
+- WIP commits: `WIP: <type>(<feature, optional>): <change>`, e.g.
+  `WIP: feat(auth): refresh expired tokens`. A commit that is not WIP drops the
+  `WIP:` prefix.
+- Subject: what was done. Body: usually about two lines on how it was done — the code
+  should explain the rest. Write for someone who never saw the session: no task
+  numbers or other session-internal references. Include the issue number when working
+  on an issue.
+- Omit the body when the diff is self-evident: a config-only change, or about 10 lines
+  or fewer.
+- A message written to a file for `git commit -F` goes in the repo's git dir as a `.md`
+  file (`git rev-parse --absolute-git-dir`, which also resolves in a worktree), nowhere
+  else.
+
+## Pushing
+Always name the remote and branch: `git push -u origin <branch>`. Never a bare
+`git push` or `git push origin HEAD` — a branch created from `origin/main` tracks main,
+so a bare push lands there. Push to the default branch only when I approved it for that
+repo (e.g. a PoC).
+
+## Rewriting others' state
+Never force-push without first showing `git log --oneline @{u}..` (what you'd overwrite)
+and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
+current working tree — create a worktree instead ([[using-git-worktrees]]).
 
 ## Fetch before diverging
 Always `git fetch origin` immediately before `rebase`, `merge`, or reasoning about
