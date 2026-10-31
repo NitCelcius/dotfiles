@@ -31,7 +31,7 @@
       "Bash(git check-ignore *)" -}}
 {{- /* Local-only history edits. Publishing a rebase needs a force push, which  */ -}}
 {{- /* stays gated. Forced branch deletes have no rule: git-gate allows the     */ -}}
-{{- /* ones it has checked, so a hook failure falls back to a prompt.          */ -}}
+{{- /* ones it has checked, and blocks the command when the hook itself fails.  */ -}}
 {{- $gitAllowRules := list
       "Bash(git rebase*)"
       "Bash(git pull --rebase*)"
@@ -111,9 +111,12 @@
 {{- /* Hooks. One row each: event, matcher ("" matches every tool or source),  */ -}}
 {{- /* script under ~/.claude with its arguments, timeout in seconds (0 keeps   */ -}}
 {{- /* the default), and extra handler fields. A .py script runs through       */ -}}
-{{- /* python, a .sh script directly. Live entries that run one                */ -}}
+{{- /* `uv run --no-project`, a .sh script directly. Live entries that run one  */ -}}
 {{- /* of these scripts are dropped and the rows appended, so hooks added by    */ -}}
 {{- /* hand survive an apply.                                                  */ -}}
+{{- /* A gate that cannot run, times out, or crashes blocks the tool call      */ -}}
+{{- /* instead of letting the command through unchecked.                      */ -}}
+{{- $gate := dict "onFailure" "block" -}}
 {{- $hooks := list
       (list "PostCompact" "" "feedback-on-compaction/feedback_on_compaction.py collect" 10 (dict))
       (list "Stop" "" "verify-on-stop/verify_on_stop.py" 240 (dict))
@@ -123,9 +126,9 @@
       (list "PostToolUse" "Bash|PowerShell" "dotfiles-change-log/dotfiles_change_log.py post-commit" 15 (dict))
       (list "PermissionRequest" "" "hooks/play-sound.sh permission" 0 (dict))
       (list "PreToolUse" "AskUserQuestion" "hooks/play-sound.sh question" 0 (dict))
-      (list "PreToolUse" "Bash|PowerShell" "rm-junction-guard/rm_junction_guard.py" 10 (dict))
-      (list "PreToolUse" "Bash|PowerShell" "git-gate/git_gate.py" 30 (dict))
-      (list "PreToolUse" "Bash" "heredoc-stdin-guard/heredoc_stdin_guard.py" 10 (dict)) -}}
+      (list "PreToolUse" "Bash|PowerShell" "rm-junction-guard/rm_junction_guard.py" 10 $gate)
+      (list "PreToolUse" "Bash|PowerShell" "git-gate/git_gate.py" 30 $gate)
+      (list "PreToolUse" "Bash" "heredoc-stdin-guard/heredoc_stdin_guard.py" 10 $gate) -}}
 {{- /* What each row does:                                                     */ -}}
 {{- /*   feedback_on_compaction — journals each compaction for that skill     */ -}}
 {{- /*   verify_on_stop     — runs the project's quick verification and exits */ -}}
@@ -141,8 +144,7 @@
 {{- /*   git_gate           — allows a forced branch delete it has checked,   */ -}}
 {{- /*                        asks when one loses unpushed work, gates force  */ -}}
 {{- /*                        and delete pushes; the timeout covers a few     */ -}}
-{{- /*                        5s-capped git calls per deleted branch, and a   */ -}}
-{{- /*                        timed-out hook falls back to a prompt           */ -}}
+{{- /*                        5s-capped git calls per deleted branch          */ -}}
 {{- /*   heredoc_stdin_guard — denies heredocs piped into Python's stdin      */ -}}
 {{- /* The completion sound goes first in Stop, ahead of live entries.         */ -}}
 {{- $firstInStop := "hooks/play-sound.sh complete" -}}
@@ -168,7 +170,7 @@
 {{-   $words := splitList " " (index $h 2) -}}
 {{-   $cmd := printf "~/.claude/%s" (first $words) -}}
 {{-   if hasSuffix ".py" (first $words) -}}
-{{-     $cmd = printf "python \"%s/.claude/%s\"" $.chezmoi.homeDir (first $words) -}}
+{{-     $cmd = printf "uv run --no-project python \"%s/.claude/%s\"" $.chezmoi.homeDir (first $words) -}}
 {{-   end -}}
 {{-   if rest $words -}}{{- $cmd = printf "%s %s" $cmd (join " " (rest $words)) -}}{{- end -}}
 {{-   $handler := dict "type" "command" "command" $cmd -}}
