@@ -21,6 +21,8 @@
   timeout and check for empty output before using a retrieved secret.
 - Write files as UTF-8. Through PowerShell pass `-Encoding utf8` explicitly — its
   default varies by version and has produced mojibake in Japanese paths and content.
+- When naming a path under `C:\Users\` to me, give the long form. The environment can
+  hand you 8.3 short names (`NITCEL~1`); resolve them first with `(Get-Item <path>).FullName`.
 
 ## Git Conventions
 
