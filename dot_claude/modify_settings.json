@@ -114,6 +114,8 @@
 {{- /* `uv run --no-project`, a .sh script directly. Live entries that run one  */ -}}
 {{- /* of these scripts are dropped and the rows appended, so hooks added by    */ -}}
 {{- /* hand survive an apply.                                                  */ -}}
+{{- /* SessionStart rows skip "compact": a compaction keeps what they injected. */ -}}
+{{- $startup := "startup|resume|clear" -}}
 {{- /* A gate that cannot run, times out, or crashes blocks the tool call      */ -}}
 {{- /* instead of letting the command through unchecked.                      */ -}}
 {{- $gate := dict "onFailure" "block" -}}
@@ -121,8 +123,8 @@
       (list "PostCompact" "" "feedback-on-compaction/feedback_on_compaction.py collect" 10 (dict))
       (list "Stop" "" "verify-on-stop/verify_on_stop.py" 240 (dict))
       (list "Stop" "" "hooks/play-sound.sh complete" 0 (dict))
-      (list "SessionStart" "" "session-start-diff/session_start_diff.py" 15 (dict))
-      (list "SessionStart" "" "dotfiles-change-log/dotfiles_change_log.py session-start" 15 (dict))
+      (list "SessionStart" $startup "session-start-diff/session_start_diff.py" 15 (dict))
+      (list "SessionStart" $startup "dotfiles-change-log/dotfiles_change_log.py session-start" 15 (dict))
       (list "PostToolUse" "Bash|PowerShell" "dotfiles-change-log/dotfiles_change_log.py post-commit" 15 (dict))
       (list "PermissionRequest" "" "hooks/play-sound.sh permission" 0 (dict))
       (list "PreToolUse" "AskUserQuestion" "hooks/play-sound.sh question" 0 (dict))
