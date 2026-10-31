@@ -1,3 +1,4 @@
+{{- /* The Git sections come from .chezmoitemplates/git-conventions.md. */ -}}
 # Personal Codex Guidance
 
 Imported and adapted from `~/.claude/CLAUDE.md` on 2026-06-26.
@@ -18,35 +19,11 @@ Imported and adapted from `~/.claude/CLAUDE.md` on 2026-06-26.
 - PowerShell profile location can be resolved with `echo $PROFILE`.
 - NEVER use Notion via Codex apps, but use MCP one.
 
-## Git Conventions
-
-### Ignore Patterns
-
-- Use `.git/info/exclude` for local-only ignore patterns, such as worktree directories.
-- Do not add personal or local entries to `.gitignore`.
-
-### Branch Naming
-
-- Bug fixes: `bugfix/(name-of-thing)` is preferred; `fix/` is acceptable.
-- Features: `feat/(name-of-something)`.
-- Append a `YYMMDD` date suffix only to avoid name conflicts, for example `feat/(name)/260328`.
-- WIP branches: prefix with `wip/`, for example `wip/bugfix/(name)` or `wip/feat/(name)`.
-
-### Commit Messages
-
-- Follow conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `chore:`, `style:`, `docs:`.
-- WIP commits: use `WIP: <plain description>`, for example `WIP: fix auth token expiry`.
-- WIP commits do not need a conventional prefix because they are rebased and reworded before merging.
-
-### Session-Start Commit Check
+{{ template "git-conventions.md" . }}
+## Session-Start Commit Check
 
 - At the start of a coding session, run `git diff HEAD --shortstat` to gauge pending changes.
 - If insertions plus deletions are roughly 300 or more, ask whether the user wants to commit before proceeding.
-
-### SSH Signing Fallback
-
-- If the signing agent socket is unavailable during a commit, ask for confirmation, then retry with `--no-gpg-sign`.
-- The user will redo signing before merging.
 
 ## Communication and Clarifying Intent
 
