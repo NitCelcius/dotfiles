@@ -1,6 +1,9 @@
 # Scans Claude Code transcripts for per-session activity, skill / slash-command usage and hook cost.
 # Usage: uv run python transcript_scan.py <~/.claude/projects dir> <out dir>
+#        uv run python transcript_scan.py session-start
 # Outputs: <out>/<host>-sessions.csv, <out>/<host>-skills.csv, <out>/<host>-summary.md
+# session-start is the SessionStart hook: it scans ~/.claude/projects into ~/.claude/usage-scan/out
+# when the newest CSV there is 7 or more days old, and prints nothing, so no context is injected.
 import csv
 import json
 import re
@@ -8,12 +11,14 @@ import socket
 import statistics
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 PROMPT_GAP_CAP_MIN = 30
 BUSY_GAP_CAP_MIN = 5
 COMMAND_RE = re.compile(r"<command-name>/?([^<\s]+)</command-name>")
+SESSION_START = "session-start"
+SCAN_INTERVAL = timedelta(days=7)
 
 
 def parse_ts(s):
@@ -91,9 +96,8 @@ def scan_file(path: Path, session_id: str, stats: Stats, is_main: bool):
     return prompts, events, tools
 
 
-def main():
-    root, out_dir = Path(sys.argv[1]).expanduser(), Path(sys.argv[2])
-    out_dir.mkdir(parents=True, exist_ok=True)
+def scan(root: Path, out_dir: Path) -> str | None:
+    """Write the three reports and return the summary line, or None when no transcript has events."""
     host = socket.gethostname()
     stats = Stats()
     rows = []
@@ -114,8 +118,9 @@ def main():
         for sub in proj.glob("*/subagents/*.jsonl"):
             scan_file(sub, sub.parent.parent.name, stats, is_main=False)
     if not rows:
-        sys.exit(f"no transcripts found under {root}")
+        return None
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     rows.sort(key=lambda r: r["start"])
     with open(out_dir / f"{host}-sessions.csv", "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -142,7 +147,34 @@ def main():
         p90 = ms_sorted[int(0.9 * (len(ms_sorted) - 1))]
         lines.append(f"| {event} | `{cmd}` | {len(ms)} | {sum(ms)/60000:.1f} | {statistics.median(ms):.0f} | {p90:.0f} |")
     (out_dir / f"{host}-summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"wrote {host}-sessions.csv, {host}-skills.csv, {host}-summary.md to {out_dir}")
+    return f"wrote {host}-sessions.csv, {host}-skills.csv, {host}-summary.md to {out_dir}"
+
+
+def scan_due(out_dir: Path) -> bool:
+    """True when out_dir has no CSV, or its newest CSV is SCAN_INTERVAL old or older."""
+    mtimes = [p.stat().st_mtime for p in out_dir.glob("*.csv")]
+    if not mtimes:
+        return True
+    return datetime.now() - datetime.fromtimestamp(max(mtimes)) >= SCAN_INTERVAL
+
+
+def session_start():
+    claude_dir = Path.home() / ".claude"
+    root, out_dir = claude_dir / "projects", claude_dir / "usage-scan" / "out"
+    if not root.is_dir() or not scan_due(out_dir):
+        return
+    scan(root, out_dir)
+
+
+def main():
+    if sys.argv[1:] == [SESSION_START]:
+        session_start()
+        return
+    root, out_dir = Path(sys.argv[1]).expanduser(), Path(sys.argv[2])
+    message = scan(root, out_dir)
+    if message is None:
+        sys.exit(f"no transcripts found under {root}")
+    print(message)
 
 
 if __name__ == "__main__":
