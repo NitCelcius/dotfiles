@@ -26,6 +26,7 @@
 .claude/dotfiles-change-log/test_dotfiles_change_log.py
 .claude/git-gate/test_git_gate.py
 .claude/feedback-on-compaction/test_compact_analysis.py
+.claude/usage-scan/test_transcript_scan.py
 
 # Project instructions and test config for working on this repo, not files for the
 # home directory.
