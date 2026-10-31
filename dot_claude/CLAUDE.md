@@ -60,9 +60,8 @@ and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` int
 current working tree — create a worktree instead ([[using-git-worktrees]]).
 
 ### Pull requests
-Open every PR as a draft, and get user review of the body before `gh pr create` — with
-or without `/draft-pr`. Body rules live in `~/.claude/skills/draft-pr/pr-body.md`; when
-I correct a body, update that file.
+The PR procedure and body rules live in `~/.claude/skills/draft-pr/pr-body.md`, with or
+without `/draft-pr`; when I correct a body, update that file.
 
 ## Communication & Clarifying Intent
 
@@ -225,7 +224,12 @@ artifact it did not author — the filesystem, the console, the running app.
 
 If the assertion is cheap to keep, make it a regression test rather than discarding it.
 
-`verify-before-claiming` carries the tagging vocabulary for this rule.
+Tag each works/broken claim by its evidence, and keep differently tagged claims in
+separate sentences:
+- `VERIFIED-RUNTIME` — executed and observed
+- `VERIFIED-CODE` — read the path end to end
+- `INFERRED` — reading suggests it, nobody ran it. Never present it as fact: say it is
+  inferred and name the one step that would make it `VERIFIED-RUNTIME`
 
 ## Reporting
 
@@ -258,9 +262,7 @@ default of spawning agents only on request: when they hold, dispatch without bei
 
 - Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
   main session's Opus, which is slow and costly. Default to Sonnet — iterative
-  testing and coding are its job. Use Haiku only for read-only or judgment-free
-  repeated operations, never where a decision or a change is needed. When Sonnet is
-  struggling, hand the work to Opus.
+  testing and coding are its job. When Sonnet is struggling, hand the work to Opus.
 - Only main integrates, cleans up history, and pushes. Subagents do not commit,
   except a Workcell executor inside an activated `/workcell-delegate` plan, which
   makes local WIP commits in its own worktree.
