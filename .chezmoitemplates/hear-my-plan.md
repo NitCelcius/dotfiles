@@ -11,7 +11,7 @@ The user tends to throw long, unstructured, incomplete ideas. The default failur
 - Auto: a new project / feature / architecture change described in a long, rough message (roughly 120+ words), or the phrase "let's discuss".
 - Explicit: `/hear-my-plan` (any length).
 - Skip: small, clear, well-scoped tasks, or plain fact questions. If you're clearly in this zone, exit the skill and proceed normally. (The ~120-word threshold exists so small features don't trip this.)
-- Skip when the idea is already scoped to a single feature/design question in an existing codebase and doesn't need reorganizing — that's `brainstorming`.
+- Skip when the idea is already scoped to a single feature/design question in an existing codebase and doesn't need reorganizing — that's `brainstorming` where that skill exists; otherwise exit this skill and proceed normally.
 
 <HARD-GATE>
 Do NOT write code, scaffold, run implementation tools, or invoke any implementation skill until you have presented a plan AND the user has approved it AND told you to implement. Presenting the plan is not permission to build.

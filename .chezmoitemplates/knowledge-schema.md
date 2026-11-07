@@ -5,7 +5,8 @@ Data source ID (use this as the `notion-create-pages` parent):
 `ebb90a48-79c1-43bf-903c-5c1c192051ab`
 
 Last confirmed against the live schema: 2026-09-07. If a create call rejects a property or option
-below as unrecognized, the schema has drifted — re-fetch the data source and update this file.
+below as unrecognized, the schema has drifted — re-fetch the data source and update
+`.chezmoitemplates/knowledge-schema.md` in the dotfiles source, since an apply overwrites this copy.
 
 ## Properties to set
 
