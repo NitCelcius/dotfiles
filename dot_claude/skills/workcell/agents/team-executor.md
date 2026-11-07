@@ -1,7 +1,6 @@
 ---
 name: team-executor
 description: Workcell-only executor for one bounded task. Use only after the user explicitly invoked /workcell-delegate for the currently active plan and the parent provides WORKCELL_TASK and WORKCELL_RUN paths.
-model: haiku
 isolation: worktree
 disallowedTools: Agent
 ---

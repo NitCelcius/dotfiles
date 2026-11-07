@@ -19,7 +19,7 @@ For each delegated executor task:
 3. Fill `TASK.md` as main. Do not make the executor rediscover facts that only exist in the user conversation. Do not summarize repository facts that the executor can cheaply recover itself.
 4. Set TASK status to `ready` when its contract is complete.
 5. Create a RUN with `workcell run create <task-dir>` and set TASK status to `running`.
-6. Spawn a fresh `team-executor` with these absolute paths in its prompt, using Claude Haiku explicitly:
+6. Spawn a fresh `team-executor` with these absolute paths in its prompt, passing `model` for the task: Sonnet by default, Haiku for simple, repetitive work that needs no decisions:
 
    `WORKCELL_TASK: <absolute TASK.md>`
    `WORKCELL_RUN: <absolute run-NNN.md>`
