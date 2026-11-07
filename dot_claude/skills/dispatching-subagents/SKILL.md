@@ -29,8 +29,12 @@ description: Decides whether and how to hand work to a subagent. Use before any 
   artifact, not against the agent's summary; if a load-bearing claim has no checkable
   artifact, say so rather than passing it through.
 - Tag what that check showed with the vocabulary in CLAUDE.md "Claiming Done".
+- When the user asks for a second opinion, for any reason, the agent arranges it without
+  asking the user to justify it.
+- Give a verifier the rule, the input and the output, not the dispatching agent's
+  reasoning or the conclusion it expects.
 - Haiku agents (`haiku-*`) are fast, so for read-only or judgment-free work whose
   result can be checked against an artifact (locating things, digesting known files
   with citations, labelling many items against a rubric, running a given observation)
-  one dispatch usually beats several rounds of grep in main. Keep choosing the
-  approach, interpreting results, and edits in main.
+  one dispatch usually beats grepping and reading four or more times in main. Keep
+  choosing the approach, interpreting results, and edits in main.

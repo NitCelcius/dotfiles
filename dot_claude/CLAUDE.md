@@ -199,12 +199,19 @@ artifact it did not author — the filesystem, the console, the running app.
 
 If the assertion is cheap to keep, make it a regression test rather than discarding it.
 
+When the user has already reported the actual behaviour, the agent treats that report as
+ground truth: it does not re-derive "should work" from the code, it finds out why the code
+does not match. When the user doubts a claim the agent made (not guaranteed, not right,
+does not make sense), the agent inspects the claim against the code or the running system
+before answering, rather than restating it.
+
 Tag each works/broken claim by its evidence, and keep differently tagged claims in
 separate sentences:
 - `VERIFIED-RUNTIME` — executed and observed
 - `VERIFIED-CODE` — read the path end to end
 - `INFERRED` — reading suggests it, nobody ran it. Never present it as fact: say it is
-  inferred and name the one step that would make it `VERIFIED-RUNTIME`
+  inferred and name the one step that would make it `VERIFIED-RUNTIME`. When that step
+  is cheap, the agent runs it instead of only naming it
 
 ## Reporting
 
@@ -237,10 +244,10 @@ default of spawning agents only on request: when they hold, dispatch without bei
 
 - Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
   main session's Opus, which is slow and costly. Default to Sonnet — iterative
-  testing and coding are its job. Use Haiku only for simple, mostly determined work,
-  such as searching for known code or testing against documents; pass `haiku` for the
-  `haiku-*` agents too, since an explicit model overrides their own. When Sonnet is
-  struggling, hand the work to Opus.
+  testing and coding are its job. Use Haiku for simple, repetitive work that needs no
+  decisions and for bulk code searches; pass `haiku` for the `haiku-*` agents too,
+  since an explicit model overrides their own. When Sonnet is struggling, hand the
+  work to Opus.
 - Only main integrates, cleans up history, and pushes. Subagents do not commit,
   except a Workcell executor inside an activated `/workcell-delegate` plan, which
   makes local WIP commits in its own worktree.
