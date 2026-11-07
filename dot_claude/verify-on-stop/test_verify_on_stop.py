@@ -114,6 +114,17 @@ def data_root(tmp_path: Path) -> Path:
     return tmp_path / "state"
 
 
+def test_quick_command_does_not_inherit_the_hooks_pythonhome(
+    repo: Path, data_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PYTHONHOME", sys.base_prefix)
+    seen = tmp_path / "pythonhome.txt"
+    write_block(repo, f"{PYTHON} -c \"import os; open(r'{seen}','w').write(os.environ.get('PYTHONHOME',''))\"")
+    r = fire(repo, data_root)
+    assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
+    assert seen.read_text() == ""
+
+
 def test_no_claude_md_allows_stop(repo: Path, data_root: Path) -> None:
     r = fire(repo, data_root)
     assert r.returncode == verify_on_stop.EXIT_ALLOW_STOP, r.stderr
