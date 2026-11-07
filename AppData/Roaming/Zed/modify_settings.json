@@ -23,6 +23,8 @@
 {{- $termBadge := dig "terminal" "show_count_badge" "" $live -}}
 {{- $termToolbar := dig "terminal" "toolbar" "" $live -}}
 {{- $agentModel := dig "agent" "default_model" "model" "claude-sonnet-5" $live -}}
+{{- $agentEffort := dig "agent" "default_model" "effort" "high" $live -}}
+{{- $favoriteModels := dig "agent" "favorite_models" "" $live -}}
 {{- $autosaveMs := dig "autosave" "after_delay" "milliseconds" 60000 $live -}}
 // Zed settings
 //
@@ -104,12 +106,12 @@
     "dock": "right",
     "use_modifier_to_send": true,
     "default_model": {
-      "effort": "high",
+      "effort": {{ toJson $agentEffort }},
       "provider": "zed.dev",
       "model": {{ toJson $agentModel }},
       "enable_thinking": true,
     },
-    "favorite_models": [
+    "favorite_models": {{ if kindIs "slice" $favoriteModels }}{{ toJson $favoriteModels }}{{ else }}[
       {
         "provider": "zed.dev",
         "model": "claude-sonnet-5",
@@ -128,7 +130,7 @@
         "enable_thinking": true,
         "effort": "MEDIUM"
       }
-    ],
+    ]{{ end }},
     "model_parameters": [],
   },
   "agent_servers": {
