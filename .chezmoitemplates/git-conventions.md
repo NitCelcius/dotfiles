@@ -34,7 +34,7 @@ repo (e.g. a PoC).
 ## Rewriting others' state
 Never force-push without first showing `git log --oneline @{u}..` (what you'd overwrite)
 and waiting for confirmation. Never `git checkout <other-branch> -- <paths>` into the
-current working tree — create a worktree instead ([[using-git-worktrees]]).
+current working tree — create a worktree instead ([[using-git-worktrees]] where that skill exists).
 
 ## Fetch before diverging
 Always `git fetch origin` immediately before `rebase`, `merge`, or reasoning about
@@ -73,4 +73,4 @@ Do not ask, do not investigate the cause — an unsigned WIP commit is never wor
 interrupting the work for.
 When the task is done, state plainly that the commits were made without signing.
 Since only the branch needs signatures (see Merge strategy), signing is reconciled
-once, at PR time, not during the work — see the `draft-pr` skill.
+once, at PR time, not during the work — see the `draft-pr` skill where it exists.
