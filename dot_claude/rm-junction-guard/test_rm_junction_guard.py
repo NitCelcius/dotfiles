@@ -127,6 +127,8 @@ def test_delete_through_junction_asks(work: Path, command: str, tool: str) -> No
         ("echo del link/", "Bash"),
         ("ls link/", "Bash"),
         ("rm -rf does-not-exist/ $UNSET_VAR/x", "Bash"),
+        ("rm -f nul", "Bash"),
+        ("Remove-Item nul", "PowerShell"),
     ],
 )
 def test_delete_not_through_junction_is_silent(work: Path, command: str, tool: str) -> None:

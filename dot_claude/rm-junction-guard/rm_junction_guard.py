@@ -301,8 +301,11 @@ def spelled_out_start(full: str, cwd: str, relative: bool) -> str:
 
 
 def first_link(full: str, start: str, reach: Reach) -> str | None:
-    rel = os.path.relpath(full, start)
-    parts = [] if rel == os.curdir else rel.split(os.sep)
+    try:
+        rel = os.path.relpath(full, start)
+    except ValueError:  # a device name such as nul resolves off the drive
+        return None
+    parts =[] if rel == os.curdir else rel.split(os.sep)
     if reach is Reach.ENTRY:
         parts = parts[:-1]
     current = start
