@@ -562,8 +562,6 @@ def strategy_table(requests: list[Request], thresholds: list[int], reset_tokens:
             areas.append(area)
             counts.append(count)
             reaches.append(max(r.context_tokens for r in reqs) >= threshold)
-        reached_counts = [count for count, reached in zip(counts, reaches) if reached]
-        reached_areas = [area for area, reached in zip(areas, reaches) if reached]
         replay_counts = [count for count in counts if count > 0]
         replay_areas = [area for area, count in zip(areas, counts) if count > 0]
         result.append({
@@ -617,7 +615,6 @@ def render_report(out: Path, requests: list[Request], compacts: list[Compact], s
     compact_by_source = Counter(e.source for e in compacts)
     usable_events = [e for e in compacts if e.post_tokens > 0]
     pre = [e.pre_tokens for e in usable_events]
-    post = [e.post_tokens for e in usable_events]
     be = [e.break_even_requests for e in compacts if math.isfinite(e.break_even_requests)]
     be_uncached = [e.break_even_requests_summary_uncached for e in compacts if math.isfinite(e.break_even_requests_summary_uncached)]
     growth = [e.growth_per_request for e in compacts if e.growth_per_request > 0]

@@ -54,7 +54,7 @@ The root `CLAUDE.md` covers working on this repo and is not deployed.
 ## Verification
 
 ```sh
-uv run --with pytest pytest -q                                          # quick
+uv run --with ruff ruff check --select E9,F .                           # quick
 uv run --with pytest pytest -q && chezmoi diff --no-pager --recursive ~/.claude     # full, before a commit or PR
 ```
 
