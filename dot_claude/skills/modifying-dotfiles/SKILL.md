@@ -68,3 +68,7 @@ For commits with no row (changed in another session, or by hand): list the commi
 dotfiles repo, check each SHA URL against the DB, and draft rows for the missing ones as
 推定 or 不明. Show the list, write on approval, then let the user fill the 不明 rows in one
 pass and update those rows.
+
+A rebase merge changes the SHA, so when a commit's SHA has no row, compare author time and
+subject with the commits the rows link to, on any branch or through `gh api`, before
+counting it as missing.
