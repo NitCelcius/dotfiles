@@ -14,6 +14,19 @@
         "y": "confirm:yes",
         "n": "confirm:no"
       }
+    },
+    {
+      "context": "MessageSelector",
+      "bindings": {
+        "ctrl+up": "select:first",
+        "shift+up": "select:first",
+        "meta+up": "select:first",
+        "shift+k": "select:first",
+        "ctrl+down": "select:last",
+        "shift+down": "select:last",
+        "meta+down": "select:last",
+        "shift+j": "select:last"
+      }
     }
   ]
 }
