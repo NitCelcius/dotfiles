@@ -466,7 +466,11 @@ def run() -> int:
         return EXIT_ALLOW_STOP
 
     uv_project = main_checkout_uv_project(root)
-    env = {**os.environ, "UV_PROJECT": str(uv_project)} if uv_project else None
+    # The hook's Python launcher may set PYTHONHOME, which would make the project's
+    # interpreter load this Python's standard library instead of its own.
+    env = {name: value for name, value in os.environ.items() if name != "PYTHONHOME"}
+    if uv_project:
+        env["UV_PROJECT"] = str(uv_project)
     uv_note = f"(run with UV_PROJECT={uv_project})\n" if uv_project else ""
 
     try:
