@@ -4,7 +4,7 @@ Delegate bounded, independently verifiable tasks to isolated executor agents, an
 escalate high-impact technical uncertainty to a read-only advisor. The goal is keeping
 exploration and iteration out of the main agent's context — not parallelism.
 
-- `team-executor` (Haiku, `isolation: worktree`) runs one bounded task in its own worktree.
+- `team-executor` (model chosen per task, `isolation: worktree`) runs one bounded task in its own worktree.
 - `team-advisor` (Opus, read-only) answers questions the main agent cannot resolve confidently.
 - Records live at `~/.local/share/workcell` as analysis artifacts. They are not
   cross-device resume state; Git remains responsible for resuming work.
