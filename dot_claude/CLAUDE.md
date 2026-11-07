@@ -38,6 +38,9 @@ adjacent to or nested near each other.
 The PR procedure and body rules live in `~/.claude/skills/draft-pr/pr-body.md`, with or
 without `/draft-pr`; when I correct a body, update that file.
 
+### Version tags
+Only propose a version tag or release if the repo already uses them or I ask.
+
 ## Communication & Clarifying Intent
 
   If the subject of my request is vague — the *what* (which component, file,
