@@ -8,8 +8,8 @@ description: Checks the branch and opens a draft PR with a generated title and b
 Run pre-PR checks in parallel, report findings in one message, then create a draft PR.
 
 Unsigned commits mid-work are expected — the signing agent drops out often and the
-work does not stop for it. But the merge is rebase & fast-forward, so GitHub does
-not sign anything on the way in: whatever is unsigned here stays unsigned on `main`.
+work does not stop for it. GitHub's rebase-merge recreates every commit, so no
+signature reaches `main` either way: signatures only need to be on the PR's branch.
 
 PR time is therefore the one place signing gets reconciled. Report unsigned commits
 here — once, as a single line with the count — and offer to re-sign. Do not treat it
@@ -53,8 +53,7 @@ If a lint script is found, run it. Report errors with fix suggestions. If no `pa
 ```bash
 git log main..HEAD --pretty=%G? | grep -c '^N' || true
 ```
-Report as one line: `N of M commits unsigned — re-sign before merge?` Since the merge
-is rebase & ff, GitHub will not sign these on the way in.
+Report as one line: `N of M commits unsigned — re-sign before merge?`
 
 To re-sign the whole branch in one pass, if the user wants it:
 ```bash
