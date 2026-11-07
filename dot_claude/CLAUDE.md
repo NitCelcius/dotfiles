@@ -262,7 +262,10 @@ default of spawning agents only on request: when they hold, dispatch without bei
 
 - Pass `model` explicitly on every dispatch; an unspecified subagent inherits the
   main session's Opus, which is slow and costly. Default to Sonnet — iterative
-  testing and coding are its job. When Sonnet is struggling, hand the work to Opus.
+  testing and coding are its job. Use Haiku only for simple, mostly determined work,
+  such as searching for known code or testing against documents; pass `haiku` for the
+  `haiku-*` agents too, since an explicit model overrides their own. When Sonnet is
+  struggling, hand the work to Opus.
 - Only main integrates, cleans up history, and pushes. Subagents do not commit,
   except a Workcell executor inside an activated `/workcell-delegate` plan, which
   makes local WIP commits in its own worktree.
